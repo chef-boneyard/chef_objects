@@ -26,6 +26,28 @@
 -include_lib("chef_objects/include/chef_osc_defaults.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+assemble_client_pubkey_ejson_test_() ->
+    [{"Handle client missing public key",
+      fun() ->
+              Client = #chef_client{name = <<"alice">>,
+                                    admin = true,
+                                    validator = false},
+              {GotList} = chef_client:assemble_client_pubkey_ejson(Client),
+              ExpectedData = [{<<"name">>, <<"alice">>},
+                              {<<"pubkey">>, <<"">>},
+                              {<<"pubkey_version">>, -1}],
+              ?assertEqual(ExpectedData, GotList) end},
+    {"Handle client w/public key",
+     fun() ->
+             Client = #chef_client{name = <<"bob">>,
+                                   public_key = <<"-----BEGIN PUBLIC KEY">>},
+             {GotList} = chef_client:assemble_client_pubkey_ejson(Client),
+             ExpectedData = [{<<"name">>, <<"bob">>},
+                             {<<"pubkey">>, <<"-----BEGIN PUBLIC KEY">>},
+                             {<<"pubkey_version">>, 0}],
+             ?assertEqual(ExpectedData, GotList) end}].
+
+
 osc_assemble_client_ejson_test_() ->
     [{"obtain expected EJSON",
       fun() ->

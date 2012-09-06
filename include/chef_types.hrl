@@ -20,6 +20,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -define(KEY_VERSION, 0).
 -define(CERT_VERSION, 1).
+-define(NONE_VERSION, -1).
 
 %% Misc Defines
 -define(EMPTY_EJSON_HASH, {[]}).

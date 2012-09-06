@@ -23,6 +23,7 @@
 -export([
          add_authn_fields/2,
 
+         assemble_client_pubkey_ejson/1,
          assemble_client_ejson/2,
          oc_assemble_client_ejson/2,
          osc_assemble_client_ejson/2,
@@ -124,6 +125,13 @@ osc_assemble_client_ejson(#chef_client{name = Name,
         AKey ->
             {[{<<"public_key">>, AKey} | Values]}
     end.
+
+-spec assemble_client_pubkey_ejson(#chef_client{}) -> ejson_term().
+assemble_client_pubkey_ejson(#chef_client{name=Name,
+                                          public_key=PubKey}) ->
+    {[{<<"name">>, value_or_default(Name, <<"">>)},
+      {<<"pubkey">>, value_or_default(PubKey, <<"">>)},
+      {<<"pubkey_version">>, key_version(PubKey)}]}.
 
 parse_binary_json(Bin, ReqName) ->
     ?PARSE_BINARY(Bin, ReqName, not_found).
@@ -283,7 +291,10 @@ key_version(<<"-----BEGIN PUBLIC KEY", _Bin/binary>>) ->
     ?KEY_VERSION;
 key_version(<<"-----BEGIN RSA PUBLIC KEY", _Bin/binary>>) ->
     %% PKCS1
-    ?KEY_VERSION.
+    ?KEY_VERSION;
+key_version(undefined) ->
+    ?NONE_VERSION.
+
 
 valid_name(Name) ->
     {Regex, Msg} = chef_regex:regex_for(client_name),
