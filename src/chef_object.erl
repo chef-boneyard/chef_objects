@@ -33,6 +33,7 @@
          make_org_prefix_id/2,
          name/1,
          new_record/4,
+         normalize/2,
          parse_constraint/1,
          set_created/2,
          set_updated/2,
@@ -514,3 +515,80 @@ cert_or_key(ClientData) ->
         _ ->
             {Cert, ?CERT_VERSION}
     end.
+
+%% @doc Normalizes the run lists of an EJson Node or Role (the first argument differentiates
+%% the two cases).  All run lists are put into canonical form (all bare recipes are
+%% qualified with "recipe[...]"), and exact duplicates are removed.
+%%
+%% Note, however, that *semantic* duplicates (such as "recipe[foo]" and "recipe[foo::default]") are
+%% *preserved*.
+-spec normalize(node | role, EjsonData :: ej:json_object()) -> NormalizedResult :: ej:json_object().
+normalize(node, NodeEjson) ->
+    RunList = ej:get({<<"run_list">>}, NodeEjson, []),
+    Normalized = normalize_runlist(RunList),
+    ej:set({<<"run_list">>}, NodeEjson, Normalized);
+normalize(role, RoleEjson) ->
+    RunListKey = <<"run_list">>,
+    EnvRunListsKey = <<"env_run_lists">>,
+
+    RunList = ej:get({RunListKey}, RoleEjson, []),
+    NormalizedRunList = normalize_runlist(RunList),
+
+    %% Roles have a hash of {environment -> run list} that need to be normalized as well.
+    {EnvRunLists} = ej:get({EnvRunListsKey}, RoleEjson, ?EMPTY_EJSON_HASH),
+    NormalizedEnvRunLists = {[{Env, normalize_runlist(List)} || {Env, List} <- EnvRunLists]},
+
+    lists:foldl(fun({Key, Value}, Role) ->
+                        ej:set({Key}, Role, Value)
+                end,
+                RoleEjson,
+                [{RunListKey, NormalizedRunList},
+                 {EnvRunListsKey, NormalizedEnvRunLists}]).
+
+%% @doc Returns a normalized version of `RunList`.  All implicitly-declared recipes (e.g.,
+%% "foo::bar") are made explicit (e.g., "recipe[foo::bar]").  Already explicit recipes and
+%% roles (which are always explicit) are unchanged.
+%%
+%% Duplicates are removed following the normalization process.
+-spec normalize_runlist(RunList :: [binary()]) -> [binary()].
+normalize_runlist(RunList) ->
+    deduplicate_run_list([normalize_item(Item) || Item <- RunList]).
+
+%% @doc Explicitly qualify a run list item.  Items already marked as "recipe[...]" or
+%% "role[...]" remain unchanged, while all other input is taken to be a recipe, and is
+%% wrapped as "recipe[ITEM]".
+%%
+%% NOTE: About the spec here, `<<_:40,_:_*8>>` is the notation for a binary string that is
+%% at least 5 bytes long (8 bits * 5 = 40).  This comes from Dialyzer inferring that the
+%% smallest possible return value for this function would be <<"role[">>, which (while true)
+%% is rather unhelpful.  We can't specify a return value of `binary()`, however, because
+%% that is an underspecification, which conflicts with our Dialyzer setting of -Wunderspecs;
+%% we want to keep that because it's a generally useful setting... just not when dealing
+%% with Erlang's lack of a true string data type :(
+-spec normalize_item(binary()) -> <<_:40,_:_*8>>.
+normalize_item(<<"role[",_Item/binary>>=Role) ->
+    Role;
+normalize_item(<<"recipe[",_Item/binary>>=Recipe) ->
+    Recipe;
+normalize_item(Recipe) when is_binary(Recipe) ->
+    <<"recipe[", Recipe/binary, "]">>.
+
+%% @doc Removes duplicates from a run list, preserving order.  Intended for use with
+%% already-normalized run lists.
+%%
+%% NOTE: The spec for this function is the way it is for the same reasons as
+%% `normalize_item/1`.  See the documentation for that function for the gory details.
+-spec deduplicate_run_list([<<_:40,_:_*8>>]) -> list().
+deduplicate_run_list(RunList) ->
+    WithoutDupes = lists:foldl(
+                     fun(Item, Deduped) ->
+                             case lists:member(Item, Deduped) of
+                                 true ->
+                                     Deduped;
+                                 false ->
+                                     [Item | Deduped]
+                             end
+                     end,
+                     [],
+                     RunList),
+    lists:reverse(WithoutDupes).
