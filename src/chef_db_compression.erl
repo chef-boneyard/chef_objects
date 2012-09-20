@@ -38,21 +38,22 @@
                           | 'cookbook_metadata'
                           | 'cookbook_long_desc'.
 
-%% Define CHEF_UNCOMPRESSED_NODE_DATA at compile time if your schema requires uncompressed
+%% TEMORARY HACK for OPC use only. Appropriate for handling pg database with uncompressed
 %% node data.
--ifdef(CHEF_UNCOMPRESSED_NODE_DATA).
-%% skip compression of node data for quirk in node table schema.
+
 -spec compress(chef_compressable(), binary()) -> binary().
 compress(chef_node, Data) ->
-    Data;
+    %% XXX: assume pg is uncompressed node data - OPC only
+    %% Ugly to reach into another app's config, but this is the quick fix
+    {ok, DbType} = application:get_env(sqerl, db_type),
+    case DbType of
+        mysql ->
+            zlib:gzip(Data);
+        pgsql ->
+            Data
+    end;
 compress(_Type, Data) ->
     zlib:gzip(Data).
--else.
-%% All types are compressed
--spec compress(chef_compressable(), binary()) -> binary().
-compress(_Type, Data) ->
-    zlib:gzip(Data).
--endif.
 
 -spec decompress(binary()) -> binary().
 %% @doc Decompresses gzip data and lets non-gzip data pass through
