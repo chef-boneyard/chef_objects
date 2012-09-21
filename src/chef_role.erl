@@ -80,7 +80,11 @@ parse_binary_json(Bin, Action) ->
     %% parse error from ejson if we can extract it?
     Role0 = ejson:decode(Bin),
     Role = set_default_values(Role0),
-    validate_role(Role, Action).
+    {ok, ValidRole} = validate_role(Role, Action),
+    %% We validate then normalize, because the normalization code assumes there are valid
+    %% entries to normalize in the first place.
+    Normalized = chef_object:normalize(role, ValidRole),
+    {ok, Normalized}.
 
 
 %% TODO: merge set_default_values and validate_role?

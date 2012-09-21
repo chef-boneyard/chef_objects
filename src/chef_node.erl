@@ -117,4 +117,8 @@ parse_check_binary_as_json_node(NodeBin, Action) ->
     %% a `throw:Why' pattern.
     Json = ejson:decode(NodeBin),
     JsonFilled = insert_autofill_fields(Json),
-    validate_json_node(JsonFilled, Action).
+    {ok, ValidNode} = validate_json_node(JsonFilled, Action),
+    %% We validate then normalize, because the normalization code assumes there are valid
+    %% entries to normalize in the first place.
+    Normalized = chef_object:normalize(node, ValidNode),
+    {ok, Normalized}.
