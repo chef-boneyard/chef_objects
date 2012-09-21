@@ -122,3 +122,54 @@ set_default_values_test_() ->
                            {[{<<"awesomeness">>, <<"considerable">>}]})
       end}
     ].
+
+parse_binary_json_test_() ->
+    [{"Ensure that all variants of recipes in a run list are properly normalized",
+      fun() ->
+              R = basic_role(),
+              RunList = [<<"foo">>,
+                         <<"bar::default">>,
+                         <<"baz::quux@1.0.0">>,
+                         <<"recipe[web]">>,
+                         <<"role[prod]">>],
+              WithRunList = ej:set({<<"run_list">>}, R, RunList),
+              JSON = ejson:encode(WithRunList),
+
+              {ok, Processed} = chef_role:parse_binary_json(JSON, create),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar::default]">>, <<"recipe[baz::quux@1.0.0]">>, <<"recipe[web]">>, <<"role[prod]">>],
+                           ej:get({<<"run_list">>}, Processed)),
+
+              {ok, ProcessedForUpdate} = chef_role:parse_binary_json(JSON, {update, ej:get({<<"name">>}, R)}),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar::default]">>, <<"recipe[baz::quux@1.0.0]">>, <<"recipe[web]">>, <<"role[prod]">>],
+                           ej:get({<<"run_list">>}, ProcessedForUpdate))
+
+      end
+     },
+     {"Ensure that all variants of recipes in environment run lists are properly normalized",
+      fun() ->
+              R = basic_role(),
+              RunLists ={[{<<"prod">>, [<<"foo">>,
+                                        <<"bar::default">>,
+                                        <<"baz::quux@1.0.0">>,
+                                        <<"recipe[web]">>,
+                                        <<"role[prod]">>]},
+                          {<<"dev">>, [<<"foo">>, <<"bar">>]}]},
+              WithRunLists = ej:set({<<"env_run_lists">>}, R, RunLists),
+              JSON = ejson:encode(WithRunLists),
+
+              %% Test for create
+              {ok, Processed} = chef_role:parse_binary_json(JSON, create),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar::default]">>, <<"recipe[baz::quux@1.0.0]">>, <<"recipe[web]">>, <<"role[prod]">>],
+                           ej:get({<<"env_run_lists">>, <<"prod">>}, Processed)),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar]">>],
+                           ej:get({<<"env_run_lists">>, <<"dev">>}, Processed)),
+
+              %% Test for update
+              {ok, ProcessedForUpdate} = chef_role:parse_binary_json(JSON, {update, ej:get({<<"name">>}, R)}),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar::default]">>, <<"recipe[baz::quux@1.0.0]">>, <<"recipe[web]">>, <<"role[prod]">>],
+                           ej:get({<<"env_run_lists">>, <<"prod">>}, ProcessedForUpdate)),
+              ?assertEqual([<<"recipe[foo]">>, <<"recipe[bar]">>],
+                           ej:get({<<"env_run_lists">>, <<"dev">>}, ProcessedForUpdate))
+      end
+     }
+    ].
