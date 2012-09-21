@@ -23,6 +23,7 @@
 -module(chef_role).
 
 -export([
+         environments/1,
          parse_binary_json/2
         ]).
 
@@ -58,6 +59,15 @@
         ]).
 
 -type role_action() :: create | { update, Name::binary() }.
+
+%% @doc Given the EJSON representation of a role, return a sorted list of the environment names
+%% present in the role's `env_run_list` hash.
+-spec environments(ej:json_object()) -> [binary()].
+environments(Role) ->
+    {Items} = ej:get({<<"env_run_lists">>}, Role),
+    %% always include the _default environment. Use usort to ensure no dups if _default
+    %% actually appears as a key in the hash.
+    lists:usort([ Key || {Key, _} <- [{<<"_default">>, ignored} | Items] ]).
 
 %% @doc Convert a binary JSON string representing a Chef Role into an
 %% EJson-encoded Erlang data structure.

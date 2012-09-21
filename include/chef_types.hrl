@@ -75,7 +75,8 @@
           'authz_id' :: object_id(),        % authorization guid (unique)
           'org_id' :: object_id(),          % organization guid
           'name' :: binary(),               % name of client
-          'validator' :: boolean(),         % boolean; true if this is a validator
+          'validator' = false :: boolean(),         % boolean; true if this is a validator
+          'admin' = false :: boolean(),             % true if this is an admin user
           'public_key' :: binary(),         % public key cert
           'pubkey_version' :: ?KEY_VERSION | ?CERT_VERSION,
                                             % version/type of public key (certificate)
@@ -152,14 +153,6 @@
           'updated_at',       % time created at
           'serialized_object' % json blob of object data
          }).
-
-%% This doesn't quite belong here, but rather in a chef_db hrl file.
-%% Used as a common data format for actor data (users or clients).
--record(chef_requestor, {
-          'type' = user :: 'user' | 'client',
-          'authz_id',
-          'name',
-          'key_data'}).
 
 -record(chef_role, {
           'id',               % guid for object (unique)
