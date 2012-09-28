@@ -127,7 +127,7 @@ osc_assemble_client_ejson(#chef_client{name = Name,
             {[{<<"public_key">>, AKey} | Values]}
     end.
 
--spec assemble_client_pubkey_ejson(#chef_client{}) -> ejson_term().
+-spec assemble_client_pubkey_ejson(#chef_client{}) -> {[{<<_:32,_:_*16>>,binary() | -1 | 0 | 1},...]}.
 assemble_client_pubkey_ejson(#chef_client{name = Name,
                                           public_key = PubKey}) ->
     {[{<<"name">>, value_or_default(Name, <<"">>)},
