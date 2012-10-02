@@ -115,10 +115,10 @@ insert_autofill_fields(JsonNode, Fields) ->
                                              {ok, ejson_term()}.
 %% @doc Parses, validates, and normalizes node JSON binary.
 parse_check_binary_as_json_node(NodeBin, Action) ->
-    %% NOTE: ejson:decode/1 will throw({invalid_json, _}) and we rely
+    %% NOTE: chef_json:decode/1 will throw({invalid_json, _}) and we rely
     %% on that behavior as the calling code is only catching based on
     %% a `throw:Why' pattern.
-    Json = ejson:decode(NodeBin),
+    Json = chef_json:decode(NodeBin),
     JsonFilled = insert_autofill_fields(Json),
     {ok, ValidNode} = validate_json_node(JsonFilled, Action),
     %% We validate then normalize, because the normalization code assumes there are valid
