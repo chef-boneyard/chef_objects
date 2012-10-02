@@ -202,3 +202,14 @@ parse_check_binary_as_json_node_test_() ->
       end
      }
     ].
+
+normalize_test_() ->
+    [{"Normalizes a node's run list",
+      fun() ->
+              Input = ej:set({<<"run_list">>}, extended_node(),
+                             [<<"foo">>, <<"bar">>, <<"baz">>]),
+              Normalized = ej:set({<<"run_list">>}, extended_node(),
+                                  [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>]),
+              ?assertEqual(Normalized,
+                           chef_node:normalize(Input))
+      end}].

@@ -33,7 +33,7 @@
          make_org_prefix_id/2,
          name/1,
          new_record/4,
-         normalize/2,
+         normalize_runlist/1,
          parse_constraint/1,
          set_created/2,
          set_updated/2,
@@ -521,40 +521,12 @@ cert_or_key(ClientData) ->
             {Cert, ?CERT_VERSION}
     end.
 
-%% @doc Normalizes the run lists of an EJson Node or Role (the first argument differentiates
-%% the two cases).  All run lists are put into canonical form (all bare recipes are
-%% qualified with "recipe[...]"), and exact duplicates are removed.
-%%
-%% Note, however, that *semantic* duplicates (such as "recipe[foo]" and "recipe[foo::default]") are
-%% *preserved*.
--spec normalize(node | role, EjsonData :: ej:json_object()) -> NormalizedResult :: ej:json_object().
-normalize(node, NodeEjson) ->
-    RunList = ej:get({<<"run_list">>}, NodeEjson, []),
-    Normalized = normalize_runlist(RunList),
-    ej:set({<<"run_list">>}, NodeEjson, Normalized);
-normalize(role, RoleEjson) ->
-    RunListKey = <<"run_list">>,
-    EnvRunListsKey = <<"env_run_lists">>,
-
-    RunList = ej:get({RunListKey}, RoleEjson, []),
-    NormalizedRunList = normalize_runlist(RunList),
-
-    %% Roles have a hash of {environment -> run list} that need to be normalized as well.
-    {EnvRunLists} = ej:get({EnvRunListsKey}, RoleEjson, ?EMPTY_EJSON_HASH),
-    NormalizedEnvRunLists = {[{Env, normalize_runlist(List)} || {Env, List} <- EnvRunLists]},
-
-    lists:foldl(fun({Key, Value}, Role) ->
-                        ej:set({Key}, Role, Value)
-                end,
-                RoleEjson,
-                [{RunListKey, NormalizedRunList},
-                 {EnvRunListsKey, NormalizedEnvRunLists}]).
-
 %% @doc Returns a normalized version of `RunList`.  All implicitly-declared recipes (e.g.,
 %% "foo::bar") are made explicit (e.g., "recipe[foo::bar]").  Already explicit recipes and
 %% roles (which are always explicit) are unchanged.
 %%
-%% Duplicates are removed following the normalization process.
+%% Exact duplicates are removed following the normalization process.  Semantic duplicates
+%% (such as "recipe[foo]" and "recipe[foo::default]") are preserved.
 -spec normalize_runlist(RunList :: [binary()]) -> [binary()].
 normalize_runlist(RunList) ->
     deduplicate_run_list([normalize_item(Item) || Item <- RunList]).

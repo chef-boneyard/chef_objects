@@ -173,3 +173,25 @@ parse_binary_json_test_() ->
       end
      }
     ].
+
+normalize_test_() ->
+    [{Message,
+      fun() ->
+              ?assertEqual(Normalized,
+                           chef_role:normalize(Input))
+      end}
+    || {Message, Input, Normalized} <- [
+                                        {"Normalizes a role's run list",
+                                         ej:set({<<"run_list">>}, basic_role(), [<<"foo">>, <<"bar">>, <<"baz">>]),
+                                         ej:set({<<"run_list">>}, basic_role(), [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>])},
+                                        {"Normalizes a role's environment run lists",
+                                         ej:set({<<"env_run_lists">>},
+                                                basic_role(),
+                                                {[{<<"prod">>, [<<"foo">>, <<"bar">>, <<"baz">>]},
+                                                  {<<"dev">>, [<<"oof">>, <<"rab">>, <<"zab">>]}]}),
+                                         ej:set({<<"env_run_lists">>},
+                                                basic_role(),
+                                                {[{<<"prod">>, [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>]},
+                                                  {<<"dev">>, [<<"recipe[oof]">>, <<"recipe[rab]">>, <<"recipe[zab]">>]}]})}
+                                       ]
+    ].

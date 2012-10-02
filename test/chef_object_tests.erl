@@ -487,59 +487,13 @@ normalize_runlist_test_() ->
                                         ]
     ].
 
-normalize_test_() ->
-    [{Message,
-      fun() ->
-              ?assertEqual(Normalized,
-                           chef_object:normalize(Type, Input))
-      end}
-    || {Message, Type, Input, Normalized} <- [
-                                              {"Normalizes a node's run list",
-                                               node,
-                                               ej:set({<<"run_list">>}, basic_node(), [<<"foo">>, <<"bar">>, <<"baz">>]),
-                                               ej:set({<<"run_list">>}, basic_node(), [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>])},
-                                              {"Normalizes a role's run list",
-                                               role,
-                                               ej:set({<<"run_list">>}, basic_role(), [<<"foo">>, <<"bar">>, <<"baz">>]),
-                                               ej:set({<<"run_list">>}, basic_role(), [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>])},
-                                              {"Normalizes a role's environment run lists",
-                                               role,
-                                               ej:set({<<"env_run_lists">>},
-                                                      basic_role(),
-                                                      {[{<<"prod">>, [<<"foo">>, <<"bar">>, <<"baz">>]},
-                                                        {<<"dev">>, [<<"oof">>, <<"rab">>, <<"zab">>]}]}),
-                                               ej:set({<<"env_run_lists">>},
-                                                      basic_role(),
-                                                      {[{<<"prod">>, [<<"recipe[foo]">>, <<"recipe[bar]">>, <<"recipe[baz]">>]},
-                                                        {<<"dev">>, [<<"recipe[oof]">>, <<"recipe[rab]">>, <<"recipe[zab]">>]}]})}
-                                             ]
-    ].
-
 %% Calling out this behavior on its own in case we decide to change it in the future
 semantic_duplication_test_() ->
-    [{Message,
+    [{"Semantic duplicates in a node run list are preserved",
       fun() ->
+              Input = [<<"foo">>, <<"foo::default">>],
+              Normalized = [<<"recipe[foo]">>, <<"recipe[foo::default]">>],
               ?assertEqual(Normalized,
-                           chef_object:normalize(Type, Input))
+                           chef_object:normalize_runlist(Input))
       end}
-     || {Message, Type, Input, Normalized} <- [
-                                               {"Semantic duplicates in a node run list are preserved",
-                                                node,
-                                                ej:set({<<"run_list">>}, basic_node(), [<<"foo">>, <<"foo::default">>]),
-                                                ej:set({<<"run_list">>}, basic_node(), [<<"recipe[foo]">>, <<"recipe[foo::default]">>])},
-                                               {"Semantic duplicates in a role run list are preserved",
-                                                role,
-                                                ej:set({<<"run_list">>}, basic_role(), [<<"foo">>, <<"foo::default">>]),
-                                                ej:set({<<"run_list">>}, basic_role(), [<<"recipe[foo]">>, <<"recipe[foo::default]">>])},
-                                               {"Semantic duplicates in a role's environment run lists are preserved",
-                                                role,
-                                                ej:set({<<"env_run_lists">>},
-                                                       basic_role(),
-                                                       {[{<<"prod">>, [<<"foo">>, <<"foo::default">>]},
-                                                         {<<"dev">>, [<<"oof">>, <<"oof::default">>]}]}),
-                                                ej:set({<<"env_run_lists">>},
-                                                       basic_role(),
-                                                       {[{<<"prod">>, [<<"recipe[foo]">>, <<"recipe[foo::default]">>]},
-                                                         {<<"dev">>, [<<"recipe[oof]">>, <<"recipe[oof::default]">>]}]})}
-                                              ]
     ].
