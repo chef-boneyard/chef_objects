@@ -555,20 +555,14 @@ normalize_item(Recipe) when is_binary(Recipe) ->
 
 %% @doc Removes duplicates from a run list, preserving order.  Intended for use with
 %% already-normalized run lists.
+%% @end
 %%
 %% NOTE: The spec for this function is the way it is for the same reasons as
 %% `normalize_item/1`.  See the documentation for that function for the gory details.
+%%
+%% TODO: This would be a good candidate for a 'chef_common' module function; it's copied
+%% from chef_wm_depsolver:remove_dups/1.
 -spec deduplicate_run_list([<<_:40,_:_*8>>]) -> list().
-deduplicate_run_list(RunList) ->
-    WithoutDupes = lists:foldl(
-                     fun(Item, Deduped) ->
-                             case lists:member(Item, Deduped) of
-                                 true ->
-                                     Deduped;
-                                 false ->
-                                     [Item | Deduped]
-                             end
-                     end,
-                     [],
-                     RunList),
-    lists:reverse(WithoutDupes).
+deduplicate_run_list(L) ->
+    WithIdx = lists:zip(L, lists:seq(1, length(L))),
+    [ Elt || {Elt, _} <- lists:ukeysort(2, lists:ukeysort(1, WithIdx)) ].
