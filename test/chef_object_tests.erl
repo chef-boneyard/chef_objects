@@ -464,14 +464,14 @@ normalize_item_test_() ->
                                         ]
     ].
 
-normalize_runlist_test_() ->
+normalize_run_list_test_() ->
     [{Message,
       fun() ->
               ?assertEqual(Normalized,
-                           chef_object:normalize_runlist(Input))
+                           chef_object:normalize_run_list(Input))
       end}
      || {Message, Input, Normalized} <- [
-                                         {"Normalizes an empty runlist", [], []},
+                                         {"Normalizes an empty run list", [], []},
                                          {"Does nothing to an already normalized list",
                                           [<<"recipe[foo]">>, <<"role[web]">>, <<"recipe[bar::baz]">>],
                                           [<<"recipe[foo]">>, <<"role[web]">>, <<"recipe[bar::baz]">>]},
@@ -494,6 +494,6 @@ semantic_duplication_test_() ->
               Input = [<<"foo">>, <<"foo::default">>],
               Normalized = [<<"recipe[foo]">>, <<"recipe[foo::default]">>],
               ?assertEqual(Normalized,
-                           chef_object:normalize_runlist(Input))
+                           chef_object:normalize_run_list(Input))
       end}
     ].

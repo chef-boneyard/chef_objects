@@ -131,5 +131,5 @@ parse_check_binary_as_json_node(NodeBin, Action) ->
 -spec normalize(ej:json_object()) -> ej:json_object().
 normalize(NodeEjson) ->
     RunList = ej:get({<<"run_list">>}, NodeEjson, []),
-    Normalized = chef_object:normalize_runlist(RunList),
+    Normalized = chef_object:normalize_run_list(RunList),
     ej:set({<<"run_list">>}, NodeEjson, Normalized).

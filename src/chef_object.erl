@@ -33,7 +33,7 @@
          make_org_prefix_id/2,
          name/1,
          new_record/4,
-         normalize_runlist/1,
+         normalize_run_list/1,
          parse_constraint/1,
          set_created/2,
          set_updated/2,
@@ -527,8 +527,8 @@ cert_or_key(ClientData) ->
 %%
 %% Exact duplicates are removed following the normalization process.  Semantic duplicates
 %% (such as "recipe[foo]" and "recipe[foo::default]") are preserved.
--spec normalize_runlist(RunList :: [binary()]) -> [binary()].
-normalize_runlist(RunList) ->
+-spec normalize_run_list(RunList :: [binary()]) -> [binary()].
+normalize_run_list(RunList) ->
     deduplicate_run_list([normalize_item(Item) || Item <- RunList]).
 
 %% @doc Explicitly qualify a run list item.  Items already marked as "recipe[...]" or

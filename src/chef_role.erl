@@ -137,11 +137,11 @@ normalize(RoleEjson) ->
     EnvRunListsKey = <<"env_run_lists">>,
 
     RunList = ej:get({RunListKey}, RoleEjson, []),
-    NormalizedRunList = chef_object:normalize_runlist(RunList),
+    NormalizedRunList = chef_object:normalize_run_list(RunList),
 
     %% Roles have a hash of {environment -> run list} that need to be normalized as well.
     {EnvRunLists} = ej:get({EnvRunListsKey}, RoleEjson, ?EMPTY_EJSON_HASH),
-    NormalizedEnvRunLists = {[{Env, chef_object:normalize_runlist(List)} || {Env, List} <- EnvRunLists]},
+    NormalizedEnvRunLists = {[{Env, chef_object:normalize_run_list(List)} || {Env, List} <- EnvRunLists]},
 
     lists:foldl(fun({Key, Value}, Role) ->
                         ej:set({Key}, Role, Value)
