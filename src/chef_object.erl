@@ -535,6 +535,9 @@ normalize_run_list(RunList) ->
 %% "role[...]" remain unchanged, while all other input is taken to be a recipe, and is
 %% wrapped as "recipe[ITEM]".
 %%
+%% It is assumed that only legal run list items will be input to this function (i.e., the
+%% run lists they are part of have already been validated).
+%%
 %% NOTE: About the spec here, `<<_:40,_:_*8>>` is the notation for a binary string that is
 %% at least 5 bytes long (8 bits * 5 = 40).  This comes from Dialyzer inferring that the
 %% smallest possible return value for this function would be <<"role[">>, which (while true)
