@@ -64,6 +64,27 @@ set_key_pair_test_() ->
              || Type <- [key, cert] ],
     lists:flatten(Tests).
 
+assemble_client_pubkey_ejson_test_() ->
+    [{"Handle client missing public key",
+      fun() ->
+              Client = #chef_client{name = <<"alice">>,
+                                    admin = true,
+                                    validator = false},
+              {GotList} = chef_client:assemble_client_pubkey_ejson(Client),
+              ExpectedData = [{<<"name">>, <<"alice">>},
+                              {<<"pubkey">>, <<"">>},
+                              {<<"pubkey_version">>, -1}],
+              ?assertEqual(ExpectedData, GotList) end},
+    {"Handle client w/public key",
+     fun() ->
+             Client = #chef_client{name = <<"bob">>,
+                                   public_key = <<"-----BEGIN PUBLIC KEY">>},
+             {GotList} = chef_client:assemble_client_pubkey_ejson(Client),
+             ExpectedData = [{<<"name">>, <<"bob">>},
+                             {<<"pubkey">>, <<"-----BEGIN PUBLIC KEY">>},
+                             {<<"pubkey_version">>, 0}],
+             ?assertEqual(ExpectedData, GotList) end}].
+
 osc_assemble_client_ejson_test_() ->
     [{"obtain expected EJSON",
       fun() ->

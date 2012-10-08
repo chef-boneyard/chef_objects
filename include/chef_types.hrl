@@ -20,6 +20,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -define(KEY_VERSION, 0).
 -define(CERT_VERSION, 1).
+-define(NONE_VERSION, -1).
 
 %% Misc Defines
 -define(EMPTY_EJSON_HASH, {[]}).
@@ -78,7 +79,7 @@
           'validator' = false :: boolean(),         % boolean; true if this is a validator
           'admin' = false :: boolean(),             % true if this is an admin user
           'public_key' :: binary(),         % public key cert
-          'pubkey_version' :: ?KEY_VERSION | ?CERT_VERSION,
+          'pubkey_version' :: ?KEY_VERSION | ?CERT_VERSION | ?NONE_VERSION,
                                             % version/type of public key (certificate)
           'last_updated_by' :: object_id(), % authz guid of last actor to update object
           'created_at' :: binary(), % time created at
