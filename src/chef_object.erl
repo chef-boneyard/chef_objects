@@ -26,7 +26,8 @@
 
 -include("chef_types.hrl").
 
--export([depsolver_constraints/1,
+-export([cert_or_key/1,
+         depsolver_constraints/1,
          ejson_for_indexing/2,
          id/1,
          make_org_prefix_id/1,
@@ -259,7 +260,7 @@ extract_roles(RunList) ->
     [ binary:part(Item, {0, byte_size(Item) - 1})
       || <<"role[", Item/binary>> <- RunList ].
 
--spec update_from_ejson(chef_object() | #chef_cookbook_version{} | #chef_user{},
+-spec update_from_ejson(chef_object() | #chef_cookbook_version{},
                         ejson_term()) -> chef_object().
 %% @doc Return a new `chef_object()' record updated according to the specified EJSON
 %% terms. Data normalization on the EJSON should occur before making this call. Fields in
@@ -313,13 +314,10 @@ update_from_ejson(#chef_cookbook_version{org_id = OrgId,
                                           meta_long_desc    = UpdatedVersion#chef_cookbook_version.meta_long_desc,
                                           metadata          = UpdatedVersion#chef_cookbook_version.metadata,
                                           checksums         = UpdatedVersion#chef_cookbook_version.checksums,
-                                          serialized_object = UpdatedVersion#chef_cookbook_version.serialized_object};
-update_from_ejson(#chef_user{} = User, UserData) ->
-    error({implement_me, User, UserData}).
+                                          serialized_object = UpdatedVersion#chef_cookbook_version.serialized_object}.
 
 
-
--spec id(chef_object()) -> object_id().
+-spec id(chef_object() | #chef_user{}) -> object_id().
 %% @doc Return the `id' field from a `chef_object()' record type.
 id(#chef_node{id = Id}) ->
     Id;
@@ -377,7 +375,10 @@ set_created(#chef_cookbook_version{} = Object, ActorId) ->
                                  last_updated_by = ActorId}.
 
 
--spec set_updated(chef_object() | #chef_cookbook_version{}, object_id()) -> chef_object().
+-spec set_updated(chef_object() |
+                  #chef_user{} |
+                  #chef_cookbook_version{},
+                  object_id()) -> chef_object().
 %% @doc Set the `updated_at' and `last_updated_by' fields of a `chef_object()' record type
 %% (if appropriate, otherwise no-op that returns the same record provided as argument).
 set_updated(#chef_data_bag{} = Object, ActorId) ->
@@ -405,7 +406,7 @@ set_updated(#chef_cookbook_version{} = Object, ActorId) ->
     Now = sql_date(now),
     Object#chef_cookbook_version{updated_at = Now, last_updated_by = ActorId}.
 
--spec name(chef_object()) -> binary() | {binary(), binary()}.
+-spec name(chef_object() | #chef_user{}) -> binary() | {binary(), binary()}.
 %% @doc Return the `name' field from a `chef_object()' record type. For `data_bag_items' the
 %% return value is a tuple of `{BagName, ItemName}',
 %% for a chef_user, the username is returned.
@@ -426,7 +427,7 @@ name(#chef_data_bag_item{data_bag_name = BagName, item_name = ItemName}) ->
 name(#chef_cookbook_version{name = Name}) ->
     Name.
 
--spec type_name(chef_object()) -> chef_type() | cookbook_version.
+-spec type_name(chef_object() | #chef_user{}) -> chef_type() | cookbook_version | user.
 %% @doc Return the common type name of a `chef_object()' record. For example, the common
 %% type name of a `chef_node{}' record is `node'.
 type_name(#chef_data_bag{}) ->
@@ -552,9 +553,9 @@ maybe_stub_authz_id(unset, ObjectId) ->
 maybe_stub_authz_id(AuthzId, _ObjectId) ->
     AuthzId.
 
-cert_or_key(ClientData) ->
-    Cert = ej:get({<<"certificate">>}, ClientData),
-    PublicKey = ej:get({<<"public_key">>}, ClientData),
+cert_or_key(Payload) ->
+    Cert = ej:get({<<"certificate">>}, Payload),
+    PublicKey = ej:get({<<"public_key">>}, Payload),
     %% Take certificate first, then public_key
     case Cert of
         undefined ->

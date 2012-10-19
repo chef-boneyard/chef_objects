@@ -21,8 +21,11 @@
 
 -export([assemble_user_ejson/2,
          parse_binary_json/1,
+         password_data/1,
          set_key_pair/3,
-         set_public_key/2]).
+         set_password_data/2,
+         set_public_key/2,
+         update_from_ejson/2]).
 
 -include("chef_types.hrl").
 
@@ -132,5 +135,28 @@ key_version(<<"-----BEGIN RSA PUBLIC KEY", _Bin/binary>>) ->
     %% PKCS1
     ?KEY_VERSION.
 
+password_data(#chef_user{hashed_password = HashedPassword,
+                                         salt = Salt,
+                                         hash_type = HashType}) ->
+        {HashedPassword, Salt, HashType}.
 
+set_password_data(#chef_user{}=User, {HashedPassword, Salt, HashType}) ->
+        User#chef_user{hashed_password = HashedPassword,
+                       salt = Salt,
+                       hash_type = HashType}.
+
+%% TODO: This is transient code and will be deprecated/removed in the future
+-spec update_from_ejson(#chef_user{}, {ejson_term(), {binary(), binary(), binary()}}) -> #chef_user{}.
+%% @doc Return a new `chef_user()' record updated according to the specified EJSON
+%% terms. This provides behavior similar to chef_objects:update_from_ejson()
+update_from_ejson(#chef_user{} = User, {UserData, PasswordData}) ->
+    Name = ej:get({<<"name">>}, UserData),
+    IsAdmin = ej:get({<<"admin">>}, UserData) =:= true,
+
+    {Key, _Version} = chef_object:cert_or_key(UserData),
+    UserWithPassword = chef_user:set_password_data(User, PasswordData),
+    UserWithPassword#chef_user{username = Name,
+                               admin = IsAdmin,
+                               public_key = Key
+                              }.
 
