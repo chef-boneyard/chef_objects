@@ -39,10 +39,10 @@
 %% functionality.
 -spec label(Upstream :: atom(),
             {Mod :: atom(), Fun :: atom()}) -> Label :: <<_:16,_:_*8>>.
-label(bookshelf=Upstream, {Mod, Fun}) when is_atom(Mod),
-                                           is_atom(Fun) ->
-    %% Bookshelf-related labels are special snowflakes because we want
-    %% to incorporate not only the upstream, module, and function, but
+label(s3=Upstream, {Mod, Fun}) when is_atom(Mod),
+				    is_atom(Fun) ->
+    %% S3-related labels are special snowflakes because we want to
+    %% incorporate not only the upstream, module, and function, but
     %% also the storage server host and the bucket name.
     %%
     %% The host will show whether we're hitting Bookshelf or actual
@@ -71,7 +71,7 @@ label(bookshelf=Upstream, {Mod, Fun}) when is_atom(Mod),
 
     {UpstreamBin, ModBin, FunBin} = to_binaries(Upstream, Mod, Fun),
 
-    %% e.g. <<bookshelf.chef_mycompany_com.my_bucket.chef_s3.delete_checksums>>
+    %% e.g. <<s3.chef_mycompany_com.my_bucket.chef_s3.delete_checksums>>
     <<UpstreamBin/binary, ".",
       HostBin/binary, ".",
       BucketBin/binary, ".",
@@ -129,7 +129,7 @@ extract_host(Url) when is_list(Url) ->
 %%
 %% Basically, ensures there no '.' characters (which would turn a
 %% single component into several).  Currently used for sanitizing the
-%% hostname and bucket components of the Bookshelf-related metrics.
+%% hostname and bucket components of the S3-related metrics.
 %%
 %% E.g., "www.foo.com" becomes "www_foo_com"
 %%
