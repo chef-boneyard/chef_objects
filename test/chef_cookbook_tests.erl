@@ -169,33 +169,19 @@ providing_constraint_test_() ->
               CB = SetProviding(<<"nginx::foo">>),
               ?assertEqual({ok, CB}, chef_cookbook:validate_cookbook(CB, NameVer))
       end},
+     {"resource[foo] ok",
+      fun() ->
+              CB = SetProviding(<<"service[snuggle]">>),
+              ?assertEqual({ok, CB}, chef_cookbook:validate_cookbook(CB, NameVer))
+      end},
+     {"defn(:foo, :bar) ok",
+      fun() ->
+              CB = SetProviding(<<"here(:kitty, :time_to_eat)">>),
+              ?assertEqual({ok, CB}, chef_cookbook:validate_cookbook(CB, NameVer))
+      end},
      {"empty recipe NOT ok",
       fun() ->
               CB = SetProviding(<<"">>),
-              ?assertThrow(#ej_invalid{type = object_key},
-                           chef_cookbook:validate_cookbook(CB, NameVer))
-      end},
-     {"recipe with single : NOT ok",
-      fun() ->
-              CB = SetProviding(<<"nginx:foo">>),
-              ?assertThrow(#ej_invalid{type = object_key},
-                           chef_cookbook:validate_cookbook(CB, NameVer))
-      end},
-     {"recipe ending in :: NOT ok",
-      fun() ->
-              CB = SetProviding(<<"nginx::">>),
-              ?assertThrow(#ej_invalid{type = object_key},
-                           chef_cookbook:validate_cookbook(CB, NameVer))
-      end},
-     {"recipe with second :: NOT ok",
-      fun() ->
-              CB = SetProviding(<<"nginx::foo::bar">>),
-              ?assertThrow(#ej_invalid{type = object_key},
-                           chef_cookbook:validate_cookbook(CB, NameVer))
-      end},
-     {"recipe with bad characters NOT ok",
-      fun() ->
-              CB = SetProviding(<<"nginx foo+bar">>),
               ?assertThrow(#ej_invalid{type = object_key},
                            chef_cookbook:validate_cookbook(CB, NameVer))
       end}
