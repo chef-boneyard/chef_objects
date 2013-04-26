@@ -146,7 +146,7 @@ cookbook_spec(CBName, CBVersion) ->
                         {{opt, <<"conflicting">>}, constraint_map_spec(cookbook_name)},
                         {{opt, <<"replacing">>}, constraint_map_spec(cookbook_name)},
 
-                        {{opt, <<"providing">>}, constraint_map_spec(recipe_name)},
+                        {{opt, <<"providing">>}, constraint_map_spec(provides)},
                          %% FIXME: what's this?
                          {{opt, <<"groupings">>}, object}
 

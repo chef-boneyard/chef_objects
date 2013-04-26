@@ -50,6 +50,38 @@ regex_for_names_test_() ->
         ?assertEqual(ok, match(<<"foo.bar">>, Regex)),
         ?assertEqual(ok, match(<<"foo_bar-123.a">>, Regex))
     end,
+    RecipeTests = fun(Type) ->
+        Regex = chef_regex:regex_for(Type),
+        ?assertEqual(nomatch, match(<<"foo:bar">>, Regex)),
+        ?assertEqual(nomatch, match(<<"foo::">>, Regex)),
+        ?assertEqual(nomatch, match(<<"::baz">>, Regex)),
+        ?assertEqual(nomatch, match(<<"foo::bar::baz">>, Regex)),
+
+        ?assertEqual(ok, match(<<"foo::bar">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::FOO">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::_foo">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::123">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::foo-bar">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::foo.bar">>, Regex)),
+        ?assertEqual(ok, match(<<"foo::foo_bar-123.a">>, Regex))
+    end,
+    ResourceTests = fun(Type) ->
+        Regex = chef_regex:regex_for(Type),
+        % TODO: fix regex to reject foo[]
+        % ?assertEqual(nomatch, match(<<"foo[]">>, Regex)),
+        ?assertEqual(nomatch, match(<<"foo[">>, Regex)),
+        ?assertEqual(nomatch, match(<<"foo[bar">>, Regex)),
+        ?assertEqual(nomatch, match(<<"[]">>, Regex)),
+        ?assertEqual(nomatch, match(<<"[foo]">>, Regex)),
+
+        ?assertEqual(ok, match(<<"foo[bar]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[FOO]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[_foo]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[123]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[foo-bar]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[foo.bar]">>, Regex)),
+        ?assertEqual(ok, match(<<"foo[foo_bar-123.a]">>, Regex))
+    end,
     [
         {"Ensure cookbook names are properly matched",
          fun() -> NameTests(cookbook_name) end},
@@ -58,21 +90,9 @@ regex_for_names_test_() ->
         {"Ensure recipe names are properly matched",
          fun() -> NameTests(recipe_name) end},
         {"Extra recipe checks",
-         fun() ->
-             Regex = chef_regex:regex_for(recipe_name),
-             ?assertEqual(nomatch, match(<<"foo:bar">>, Regex)),
-             ?assertEqual(nomatch, match(<<"foo::">>, Regex)),
-             ?assertEqual(nomatch, match(<<"::baz">>, Regex)),
-             ?assertEqual(nomatch, match(<<"foo::bar::baz">>, Regex)),
-
-             ?assertEqual(ok, match(<<"foo::bar">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::FOO">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::_foo">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::123">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::foo-bar">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::foo.bar">>, Regex)),
-             ?assertEqual(ok, match(<<"foo::foo_bar-123.a">>, Regex))
-         end}
+         fun() -> RecipeTests(recipe_name) end},
+        {"Check resource names",
+         fun() -> ResourceTests(resource_name) end}
     ].
 
 

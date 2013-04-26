@@ -69,6 +69,13 @@
 -define(COOKBOOK_PREFIX_REGEX, "(?:" ++ ?NAME_REGEX ++ "::)?").
 -define(COOKBOOK_QUALIFIED_RECIPE_REGEX, ?COOKBOOK_PREFIX_REGEX ++ ?NAME_REGEX).
 
+-define(RESOURCE_REGEX, ?NAME_REGEX ++ "\[" ++ ?NAME_REGEX ++ "\]").
+
+%% provides needs to accept recipes, resources, and definitions.
+%% because validating all of these would be quite painful,
+%% we just accept any non-empty string.
+-define(PROVIDES_REGEX, ".+" ).
+
 %% Sometimes, recipe names can have version qualifiers as well.
 -define(VERSIONED_RECIPE_REGEX, ?COOKBOOK_QUALIFIED_RECIPE_REGEX ++ ?RECIPE_VERSION_REGEX).
 
@@ -88,6 +95,12 @@ regex_for(recipe_name) ->
     %% Note that this does NOT include a version suffix!
     generate_regex_msg_tuple(?ANCHOR_REGEX(?COOKBOOK_QUALIFIED_RECIPE_REGEX),
                              <<"Invalid recipe name. Must only contain A-Z, a-z, 0-9, _ or -">>);
+regex_for(provides) ->
+    generate_regex_msg_tuple(?ANCHOR_REGEX(?PROVIDES_REGEX),
+                             <<"Malformed provides. Must be a recipe containing only A-Z, a-z, 0-9, _ or -; or a resource containing an identifier as before, followed by [, another identifier, and finally ]">>);
+regex_for(resource_name) ->
+    generate_regex_msg_tuple(?ANCHOR_REGEX(?RESOURCE_REGEX),
+                            <<"Malformed resource. Must begin with an identifier containing only A-Z, a-z, 0-9, _ or -, followed by [, another identifier, and finally ]">>);
 regex_for(cookbook_version) ->
     generate_regex_msg_tuple(?ANCHOR_REGEX(?VERSION_REGEX),
                              <<"Invalid cookbook version">>);
