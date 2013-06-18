@@ -326,18 +326,14 @@ qualified_recipe_names(CookbookName, SerializedObject) ->
 %% @doc for a given qualified recipe name, extract the base cookbook
 %% name. If the input is not a qualified recipe name, return it
 %% unmodified.
--spec base_cookbook_name(binary()|string()) -> binary().
-base_cookbook_name(Recipe) when is_list(Recipe) ->
-    base_cookbook_name(list_to_binary(Recipe));
-base_cookbook_name(Recipe) when is_binary(Recipe) ->
-    case re:split(Recipe, <<"::">>) of
+-spec base_cookbook_name(binary() | string()) -> binary().
+base_cookbook_name(Recipe) ->
+    case re:split(Recipe, <<"::">>, [{return, binary}]) of
         [Cookbook, _Recipe] ->
             Cookbook;
         [Cookbook] ->
             Cookbook
-    end;
-base_cookbook_name(Recipe) ->
-    Recipe.
+    end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Private Functions

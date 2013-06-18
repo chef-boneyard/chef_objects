@@ -377,7 +377,8 @@ base_cookbook_name_test_() ->
              %% {Input, Expected}
              {<<"apache2::default">>, <<"apache2">>},
              {"apache2::default",     <<"apache2">>},
-             {<<"apache2">>,          <<"apache2">>}
+             {<<"apache2">>,          <<"apache2">>},
+             {"apache2",              <<"apache2">>}
             ],
     [ ?_assertEqual(Expected, chef_cookbook:base_cookbook_name(Input))
       || {Input, Expected} <- Tests ].
