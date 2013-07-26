@@ -138,17 +138,18 @@ depsolver_dep_empty_world() ->
     World = [ ],
     Constraints = [ ],
     Ret = chef_depsolver:solve_dependencies(World, Constraints, [<<"foo">>]),
-    ?assertEqual({error, {unreachable_package, <<"foo">>}}, Ret).
+    ?assertEqual({error,invalid_constraints,
+                  [{non_existent_cookbooks,[<<"foo">>]},
+                   {constraints_not_met,[]}]}, Ret).
 
 depsolver_dep_no_version() ->
     World = [ cookbook(<<"foo">>, <<"1.2.3">>)],
     Constraints = [ ],
     Ret = chef_depsolver:solve_dependencies(World, Constraints, [{<<"foo">>, <<"2.0.0">>}]),
-    Detail = [{[{[{<<"foo">>, {{2,0,0}, {[], []}}}],
-                 [{<<"foo">>, {{2,0,0}, {[], []}}}]}],
-               []
-              }],
-    ?assertEqual({error, Detail}, Ret).
+    Error = {error,invalid_constraints,
+             [{non_existent_cookbooks,[]},
+              {constraints_not_met,[<<"(foo = 2.0.0)">>]}]},
+    ?assertEqual(Error, Ret).
 
 %% Some tests which mimic the pedant tests for the depsolver endpoint
 
@@ -166,9 +167,12 @@ depsolver_dep_doesnt_exist() ->
     World = [ cookbook(<<"foo">>, <<"1.2.3">>, {<<"bar">>, <<"2.0.0">>, gt})],
     Constraints = [],
     Ret = chef_depsolver:solve_dependencies(World, Constraints, [<<"foo">>]),
-    ?assertEqual({error,
-            [{[{[<<102,111,111>>],[{<<102,111,111>>,{{1,2,3},{[],[]}}}]}],[{{<<102,111,111>>,{{1,2,3},{[],[]}}},[{<<98,97,114>>,{{2,0,0},{[],[]}},gt}]}]}]}
-        , Ret).
+    Error = {error,no_solution,
+             [{message,<<"Unable to satisfy constraints on package bar, which does not exist, due to solution constraint (foo >= 0.0.0). Solution constraints that may result in a constraint on bar: [(foo = 1.2.3) -> (bar > 2.0.0)]">>},
+              {unsatisfiable_run_list_item,<<"(foo >= 0.0.0)">>},
+              {non_existent_cookbooks,[<<"bar">>]},
+              {most_constrained_cookbooks,[]}]},
+    ?assertEqual(Error, Ret).
 
 %%
 %% We have v 2.0.0 of bar but want > 2.0.0
@@ -185,13 +189,12 @@ depsolver_dep_not_new_enough() ->
               cookbook(<<"bar">>, <<"2.0.0">>)],
     Constraints = [{<<"foo">>, <<"1.2.3">>, '='}],
     Ret = chef_depsolver:solve_dependencies(World, Constraints, [<<"foo">>]),
-    %% TODO: Should this have bar in bad ??
-    Detail = [
-              {[{[<<"foo">>], [{<<"foo">>, {{1, 2, 3}, {[], []}}}]}],
-                  [{{<<"foo">>, {{1, 2, 3}, {[], []}}},
-                    [{<<"bar">>, {{2, 0, 0}, {[], []}}, '>'}]}]}
-             ],
-    ?assertEqual({error, Detail}, Ret).
+    Error = {error,no_solution,
+             [{message,<<"Unable to satisfy constraints on package bar due to solution constraint (foo >= 0.0.0). Solution constraints that may result in a constraint on bar: [(foo = 1.2.3) -> (bar > 2.0.0)]">>},
+              {unsatisfiable_run_list_item,<<"(foo >= 0.0.0)">>},
+              {non_existent_cookbooks,[]},
+              {most_constrained_cookbooks,[<<"bar = 2.0.0 -> []">>]}]},
+    ?assertEqual(Error, Ret).
 
 %%
 %% circular deps are bad
@@ -207,12 +210,12 @@ depsolver_impossible_dependency() ->
     World = [ cookbook(<<"foo">>, <<"1.2.3">>, { <<"bar">>, <<"2.0.0">>, gt}),
              cookbook(<<"bar">>, <<"2.0.0">>, { <<"foo">>, <<"3.0.0">>, gt})],
     Ret = chef_depsolver:solve_dependencies(World, [], [<<"foo">>]),
-    Detail = [{[{[<<"foo">>],
-                 [{<<"foo">>, {{1,2,3}, {[], []}}}]}],
-               [{{<<"foo">>, {{1,2,3}, {[], []}}},
-                 [{<<"bar">>, {{2,0,0}, {[], []}}, gt}]}]
-              }],
-    ?assertEqual({error, Detail}, Ret).
+    Error = {error,no_solution,
+             [{message,<<"Unable to satisfy constraints on package bar due to solution constraint (foo >= 0.0.0). Solution constraints that may result in a constraint on bar: [(foo = 1.2.3) -> (bar > 2.0.0)]">>},
+              {unsatisfiable_run_list_item,<<"(foo >= 0.0.0)">>},
+              {non_existent_cookbooks,[]},
+              {most_constrained_cookbooks,[<<"bar = 2.0.0 -> [(foo > 3.0.0)]">>]}]},
+        ?assertEqual(Error, Ret).
 
 depsolver_environment_respected() ->
     World = [ cookbook(<<"foo">>, <<"1.2.3">>, {<<"bar">>, <<"2.0.0">>, gt}),
@@ -226,8 +229,8 @@ depsolver_environment_respected() ->
     Env123 = make_env(<<"myenv">>, {[{<<"bar">>, <<"> 1.1.0">>}]}),
     Constraints123 = chef_object:depsolver_constraints(Env123),
 
-    Expect100 = {ok, [{<<"bar">>, {1, 0, 0}}, {<<"foo">>, {1, 0, 0}}]},
-    Expect123 = {ok, [{<<"bar">>, {3, 0, 0}}, {<<"foo">>, {1, 2, 3}}]},
+    Expect100 = {ok, [{<<"foo">>, {1, 0, 0}}, {<<"bar">>, {1, 0, 0}}]},
+    Expect123 = {ok, [{<<"foo">>, {1, 2, 3}}, {<<"bar">>, {3, 0, 0}}]},
 
     Tests = [ {Constraints100, Expect100},
               {Constraints123, Expect123} ],
@@ -246,9 +249,12 @@ depsolver_impossible_dependency_via_environment() ->
     ?assertMatch({ok, _}, chef_depsolver:solve_dependencies(World, [], [<<"foo">>])),
     %% with the constraints, foo can't be satisfied
     Ret = chef_depsolver:solve_dependencies(World, Constraints, [<<"foo">>]),
-    Expect = {error, [{[{[<<"foo">>], [{<<"foo">>, {{1, 2, 3}, {[], []}}}]}],
-                      [{{<<"foo">>, {{1, 2, 3}, {[], []}}}, [{<<"bar">>, {{2, 0, 0}, {[], []}}, gt}]}]}]},
-    ?assertEqual(Expect, Ret).
+    Error = {error,no_solution,
+             [{message,<<"Unable to satisfy constraints on package bar due to solution constraint (foo >= 0.0.0). Solution constraints that may result in a constraint on bar: [(foo = 1.2.3) -> (bar > 2.0.0)]">>},
+              {unsatisfiable_run_list_item,<<"(foo >= 0.0.0)">>},
+              {non_existent_cookbooks,[]},
+              {most_constrained_cookbooks,[<<"bar = 1.0.0 -> []">>]}]},
+    ?assertEqual(Error, Ret).
 
 %% A more complex test.
 %% World:
@@ -273,10 +279,17 @@ depsolver_complex_dependency() ->
              cookbook(<<"baz">>, <<"2.0.0">>)
             ],
     Ret = chef_depsolver:solve_dependencies(World, [], [<<"foo">>, <<"buzz">>]),
-    Expected = [{{<<"buzz">>,{{1,0,0}, {[], []}}},[{<<"baz">>,{{1,2,0}, {[], []}},gt}]}],
-    %% Check the culprits
-    {error, [{_Paths, Culprits}] } = Ret,
-    ?assertEqual(Expected, Culprits),
+
+    _Error = {error,no_solution,
+              [{message,<<"Unable to satisfy constraints on package baz due to solution constraint (foo >= 0.0.0). Solution constraints that may result in a constraint on baz: [(foo = 1.2.3) -> (bar = 1.0.0) -> (baz = 1.0.0)], [(foo = 1.2.3) -> (buzz = 1.0.0) -> (baz > 1.2.0)], [(buzz = 1.0.0) -> (baz > 1.2.0)], [(buzz = 2.0.0) -> (baz = 1.0.0)]">>},
+               {unsatisfiable_run_list_item,<<"(foo >= 0.0.0)">>},
+               {non_existent_cookbooks,[]},
+               {most_constrained_cookbooks,[<<"baz = 1.0.0 -> []">>]}]},
+
+    %% %% Check the culprits
+    %% {error, [{_Paths, Culprits}] } = Ret,
+    %% ?assertEqual(Expected, Culprits),
+
     %% verify that an unrelated set of constraints doesn't change anything
     Cons = [{<<"someting">>, <<"1.0.0">>, '='}],
     ?assertEqual(Ret, chef_depsolver:solve_dependencies(World, Cons, [<<"foo">>, <<"buzz">>])).

@@ -76,8 +76,7 @@ validate_body(Body) ->
                          EnvConstraints :: [depsolver:constraint()],
                          Cookbooks :: [Name::binary() |
                                              {Name::binary(), Version::binary()}]) ->
-    {ok, [ versioned_cookbook()]} | {error, term()}.
-
+                                {ok, [ versioned_cookbook()]} | {error, term()}.
 
 %% @doc Main entry point into the depsolver.  It is supplied with a dependency_set()
 %% containing all the cookbook versions and their dependencies that are in the database
@@ -94,22 +93,21 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
     %% environment, the solver is unable to backtrack and provide extra error detail. With
     %% this approach, the "world" of cookbooks conforms to what the user will see from
     %% listing cookbooks within an environment.
-    {ok, FilteredVersions} =
-        folsom_time(depsolver, filter_packages_with_deps,
-                    fun() ->
-                            depsolver:filter_packages_with_deps(AllVersions,
-                                                                EnvConstraints)
-                    end),
-    Graph = folsom_time(depsolver, add_packages,
-                        fun() ->
-                                depsolver:add_packages(depsolver:new_graph(),
-                                                       FilteredVersions)
-                        end),
-    Result = folsom_time(depsolver, solve,
-                         fun() ->
-                                 depsolver:solve(Graph, Cookbooks, depsolver_timeout())
-                         end),
-    sanitize_semver(Result).
+
+    %% TODO: filter packages on the ruby side
+    {ok, FilteredVersions} = depsolver:filter_packages_with_deps(AllVersions,
+                                                                 EnvConstraints),
+
+    Port = open_port({spawn, "ruby /Users/stephen/oc/chef_objects/depselector.rb"},
+                     [{packet, 4}, nouse_stdio, exit_status, binary]),
+    Payload = term_to_binary({solve, [{filtered_versions, FilteredVersions},
+                                      {all_versions, AllVersions},
+                                      {run_list, Cookbooks}]}),
+    port_command(Port, Payload),
+    receive
+        {Port, {data, Data}} ->
+            Solution = binary_to_term(Data)
+    end.
 
 %% @doc The depsolver module (as of version 0.1.0) supports semver and returns a version
 %% structure as `{Name, {{1, 2, 3}, {Alpha, Build}}}'. Chef does not currently support
