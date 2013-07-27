@@ -106,7 +106,7 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
     port_command(Port, Payload),
     receive
         {Port, {data, Data}} ->
-            Solution = binary_to_term(Data)
+            binary_to_term(Data)
     end.
 
 depsolver_timeout() ->
