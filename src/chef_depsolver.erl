@@ -109,19 +109,6 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
             Solution = binary_to_term(Data)
     end.
 
-%% @doc The depsolver module (as of version 0.1.0) supports semver and returns a version
-%% structure as `{Name, {{1, 2, 3}, {Alpha, Build}}}'. Chef does not currently support
-%% semver style versions for cookbooks. For successful solve results, we simplify the
-%% return. Error returns will contain version data (with semver details). These are left in
-%% place for two reasons: 1) the error structures are not as simple to sanitize; 2) the
-%% depsolver_culprits module is used to format the error returns and it is expecting data in
-%% this format.
-sanitize_semver({ok, WithSemver}) ->
-    XYZOnly = [ {Name, XYZVersion} || {Name, {XYZVersion, _SemVer}} <- WithSemver ],
-    {ok, XYZOnly};
-sanitize_semver(Error) ->
-    Error.
-
 depsolver_timeout() ->
     case application:get_env(chef_objects, depsolver_timeout) of
         undefined ->
