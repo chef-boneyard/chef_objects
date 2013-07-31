@@ -21,30 +21,45 @@ def translate_constraint(constraint)
   end
 end
 
+def constraint_to_str(constraint, constraint_version)
+  "#{translate_constraint(constraint)} #{constraint_version}"
+end
+
 receive do |m|
   m.when([:solve, Erl.hash]) do |data|
     # create dependency graph from cookbooks
     graph = DepSelector::DependencyGraph.new
 
-    data[:filtered_versions].each do |vsn|
+    env_constraints = data[:environment_constraints].inject({}) do |acc, env_constraint|
+      name, version, constraint = env_constraint
+      acc[name] = DepSelector::VersionConstraint.new(constraint_to_str(constraint, version))
+      acc
+    end
+
+    all_versions = []
+
+    data[:all_versions].each do | vsn|
       name, version_constraints = vsn
       version_constraints.each do |version_constraint| # todo: constraints become an array in ruby
                                                        # due to the erlectricity conversion from
                                                        # tuples
         version, constraints = version_constraint
-        package_version = graph.package(name).add_version(DepSelector::Version.new(version))
-        constraints.each do |package_constraint|
-          constraint_name, constraint_version, constraint = package_constraint
-          constraint_string = "#{translate_constraint(constraint)} #{constraint_version}"
-          version_constraint = DepSelector::VersionConstraint.new(constraint_string)
-          dependency = DepSelector::Dependency.new(graph.package(constraint_name), version_constraint)
-          package_version.dependencies << dependency
+
+        # filter versions based on environment constraints
+        env_constraint = env_constraints[name]
+        if (!env_constraint || env_constraint.include?(DepSelector::Version.new(version)))
+          package_version = graph.package(name).add_version(DepSelector::Version.new(version))
+          constraints.each do |package_constraint|
+            constraint_name, constraint_version, constraint = package_constraint
+            version_constraint = DepSelector::VersionConstraint.new(constraint_to_str(constraint, constraint_version))
+            dependency = DepSelector::Dependency.new(graph.package(constraint_name), version_constraint)
+            package_version.dependencies << dependency
+          end
         end
       end
-    end
 
-    all_versions = data[:all_versions].inject([]) do |acc, (name, constriants)|
-      acc << graph.package(name)
+      # regardless of filter, add package reference to all_packages
+      all_versions << graph.package(name)
     end
 
     run_list = data[:run_list].map do |run_list_item|

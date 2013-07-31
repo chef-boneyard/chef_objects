@@ -75,10 +75,7 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_call({solve, AllVersions, EnvConstraints, Cookbooks}, _From, #state{port=Port} = State) ->
-    %% TODO: filter packages on the ruby side
-    {ok, FilteredVersions} = depsolver:filter_packages_with_deps(AllVersions,
-                                                                 EnvConstraints),
-    Payload = term_to_binary({solve, [{filtered_versions, FilteredVersions},
+    Payload = term_to_binary({solve, [{environment_constraints, EnvConstraints},
                                       {all_versions, AllVersions},
                                       {run_list, Cookbooks}]}),
     port_command(Port, Payload),
