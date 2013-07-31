@@ -27,5 +27,6 @@
                   ibrowse,
                   depsolver
                  ]},
+  {mod, {chef_objects_app, []}},
   {env, []}
  ]}.

@@ -87,27 +87,7 @@ validate_body(Body) ->
 solve_dependencies(_AllVersions, _EnvConstraints, []) ->
     {ok, []};
 solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
-    %% We apply the environment cookbook version constraints as a pre-filter, removing
-    %% cookbook versions that don't satisfy early. This makes for a smaller graph and an
-    %% easier problem to solve. However, when cookbooks are filtered out due to the
-    %% environment, the solver is unable to backtrack and provide extra error detail. With
-    %% this approach, the "world" of cookbooks conforms to what the user will see from
-    %% listing cookbooks within an environment.
-
-    %% TODO: filter packages on the ruby side
-    {ok, FilteredVersions} = depsolver:filter_packages_with_deps(AllVersions,
-                                                                 EnvConstraints),
-
-    Port = open_port({spawn, "ruby /Users/stephen/oc/chef_objects/depselector.rb"},
-                     [{packet, 4}, nouse_stdio, exit_status, binary]),
-    Payload = term_to_binary({solve, [{filtered_versions, FilteredVersions},
-                                      {all_versions, AllVersions},
-                                      {run_list, Cookbooks}]}),
-    port_command(Port, Payload),
-    receive
-        {Port, {data, Data}} ->
-            binary_to_term(Data)
-    end.
+    gen_server:call(chef_depsolver, {solve, AllVersions, EnvConstraints, Cookbooks}).
 
 depsolver_timeout() ->
     case application:get_env(chef_objects, depsolver_timeout) of
