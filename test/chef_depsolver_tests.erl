@@ -27,28 +27,29 @@
 -include_lib("chef_objects/include/chef_osc_defaults.hrl").
 -compile([export_all]).
 
--define(NEEDED_APPS, [depsolver, folsom]).
+-define(NEEDED_APPS, [ibrowse, folsom, chef_objects]).
 
 all_test_() ->
   {foreach,
-    fun() ->
-        error_logger:delete_report_handler(error_logger_tty_h),
-        [ application:start(App) || App <- ?NEEDED_APPS ]
-    end,
-    fun(_) ->
-            [ application:stop(App) || App <- lists:reverse(?NEEDED_APPS) ]
-    end,
-    [
-        {?MODULE, depsolver_dep_empty_world},
-        {?MODULE, depsolver_dep_no_version},
-        {?MODULE, depsolver_dep_doesnt_exist},
-        {?MODULE, depsolver_dep_not_new_enough},
-        {?MODULE, depsolver_impossible_dependency},
-        {generator, ?MODULE, depsolver_environment_respected},
-        {?MODULE, depsolver_impossible_dependency_via_environment},
-        {?MODULE, depsolver_complex_dependency}
-  ]
-}.
+   fun() ->
+           error_logger:delete_report_handler(error_logger_tty_h),
+           [ ok = application:start(App) || App <- ?NEEDED_APPS ]
+   end,
+   fun(_) ->
+           [ application:stop(App) || App <- lists:reverse(?NEEDED_APPS) ]
+   end,
+   [
+    {?MODULE, depsolver_dep_empty_world},
+    {?MODULE, depsolver_dep_no_version},
+    {?MODULE, depsolver_dep_doesnt_exist},
+    {?MODULE, depsolver_dep_not_new_enough},
+    {?MODULE, depsolver_impossible_dependency},
+    {generator, ?MODULE, depsolver_environment_respected},
+    {?MODULE, depsolver_impossible_dependency_via_environment},
+    {?MODULE, depsolver_complex_dependency}
+   ]
+  }.
+
 %% Contains all allowed variants of run list items
 good_runlist() ->
     {[ {<<"run_list">>, [<<"ntp">>, <<"recipe[ntp]">>, <<"recipe[apache2::default]">>, <<"role[foo]">>]} ]}.

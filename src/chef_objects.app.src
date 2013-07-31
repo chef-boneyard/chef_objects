@@ -23,9 +23,8 @@
   {applications, [
                   kernel,
                   stdlib,
-                  ejson,
                   ibrowse,
-                  depsolver
+                  folsom
                  ]},
   {mod, {chef_objects_app, []}},
   {env, []}
