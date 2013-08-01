@@ -45,6 +45,37 @@
 
 -define(DEFAULT_DEPSOLVER_TIMEOUT, 2000).
 
+-export_type([constraint/0,
+              dependency_set/0,
+              pkg/0]).
+
+%%============================================================================
+%% Types
+%%============================================================================
+-type pkg_name() :: binary() | atom().
+-type pkg() :: {pkg_name(), vsn()}.
+-type raw_vsn() :: ec_semver:any_version().
+
+-type vsn() :: 'NO_VSN'
+             | ec_semver:semver().
+
+-type constraint_op() ::
+        '=' | gte | '>=' | lte | '<='
+      | gt | '>' | lt | '<' | pes | '~>' | between.
+
+-type raw_constraint() :: pkg_name()
+                        | {pkg_name(), raw_vsn()}
+                        | {pkg_name(), raw_vsn(), constraint_op()}
+                        | {pkg_name(), raw_vsn(), vsn(), between}.
+
+-type constraint() :: pkg_name()
+                    | {pkg_name(), vsn()}
+                    | {pkg_name(), vsn(), constraint_op()}
+                    | {pkg_name(), vsn(), vsn(), between}.
+
+-type vsn_constraint() :: {raw_vsn(), [raw_constraint()]}.
+-type dependency_set() :: {pkg_name(), [vsn_constraint()]}.
+
 %% @doc Convert a binary JSON string representing a Chef runlist into an
 %% EJson-encoded Erlang data structure.
 %% @end
@@ -72,8 +103,8 @@ validate_body(Body) ->
         Bad -> throw(Bad)
     end.
 
--spec solve_dependencies(AllVersions :: [depsolver:dependency_set()],
-                         EnvConstraints :: [depsolver:constraint()],
+-spec solve_dependencies(AllVersions :: [dependency_set()],
+                         EnvConstraints :: [constraint()],
                          Cookbooks :: [Name::binary() |
                                              {Name::binary(), Version::binary()}]) ->
                                 {ok, [ versioned_cookbook()]} | {error, term()}.
