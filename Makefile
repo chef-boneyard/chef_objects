@@ -52,13 +52,16 @@ compile: $(DEPS)
 $(DEPS):
 	@rebar get-deps
 
+bundle:
+	@cd priv/depselector_rb; bundle install --path ./bundle
+
 # Full clean and removal of all deps. Remove deps first to avoid
 # wasted effort of cleaning deps before nuking them.
 distclean:
-	@rm -rf deps $(DEPS_PLT)
+	@rm -rf deps $(DEPS_PLT) priv/depselector_rb/.bundle
 	@rebar clean
 
-eunit:
+eunit: compile bundle
 	@rebar skip_deps=true eunit
 
 test: eunit

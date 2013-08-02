@@ -1,4 +1,5 @@
 require 'rubygems'
+require 'bundler/setup'
 require 'dep_selector'
 require 'erlectricity'
 

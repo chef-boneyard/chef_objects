@@ -55,7 +55,7 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    RubyExecutable = filename:join(code:priv_dir(chef_objects), "depselector.rb"),
+    RubyExecutable = filename:join([code:priv_dir(chef_objects), "depselector_rb", "depselector.rb"]),
     Port = open_port({spawn, "ruby " ++ RubyExecutable},
                      [{packet, 4}, nouse_stdio, exit_status, binary]),
     {ok, #state{port=Port}}.
