@@ -1,3 +1,6 @@
+# ensure that the Gemfile is in the cwd
+Dir.chdir(File.dirname(__FILE__))
+
 require 'rubygems'
 require 'bundler/setup'
 require 'dep_selector'
