@@ -27,13 +27,18 @@
 -include_lib("chef_objects/include/chef_osc_defaults.hrl").
 -compile([export_all]).
 
--define(NEEDED_APPS, [ibrowse, folsom, chef_objects]).
+-define(NEEDED_APPS, [ pooler ]).
 
 all_test_() ->
   {foreach,
    fun() ->
            error_logger:delete_report_handler(error_logger_tty_h),
-           [ ok = application:start(App) || App <- ?NEEDED_APPS ]
+           [ ok = application:start(App) || App <- ?NEEDED_APPS ],
+           PoolConfig = [{name, chef_depsolver},
+                         {max_count, 1},
+                         {init_count, 1},
+                         {start_mfa, {chef_depsolver_worker, start_link, []}}],
+           pooler:new_pool(PoolConfig)
    end,
    fun(_) ->
            [ application:stop(App) || App <- lists:reverse(?NEEDED_APPS) ]

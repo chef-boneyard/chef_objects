@@ -24,8 +24,8 @@
                   kernel,
                   stdlib,
                   ibrowse,
-                  folsom
+                  folsom,
+                  pooler
                  ]},
-  {mod, {chef_objects_app, []}},
   {env, []}
  ]}.
