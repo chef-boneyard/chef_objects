@@ -26,6 +26,7 @@ def translate_constraint(constraint)
 end
 
 def constraint_to_str(constraint, constraint_version)
+  return nil unless constraint_version
   "#{translate_constraint(constraint)} #{constraint_version}"
 end
 
@@ -67,15 +68,10 @@ receive do |m|
     end
 
     run_list = data[:run_list].map do |run_list_item|
-      case run_list_item
-      when Array
-        item_name, item_constraint = run_list_item
-        version_constraint = DepSelector::VersionConstraint.new(item_constraint)
-        DepSelector::SolutionConstraint.new(graph.package(item_name), version_constraint)
-      else
-        version_constraint = DepSelector::VersionConstraint.new(">= 0.0.0")
-        DepSelector::SolutionConstraint.new(graph.package(run_list_item), version_constraint)
-      end
+      item_name, item_constraint_version, item_constraint = run_list_item
+      version_constraint = DepSelector::VersionConstraint.new(constraint_to_str(item_constraint,
+                                                                                item_constraint_version))
+      DepSelector::SolutionConstraint.new(graph.package(item_name), version_constraint)
     end
 
     selector = DepSelector::Selector.new(graph, 10)

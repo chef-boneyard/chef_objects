@@ -51,7 +51,19 @@ all_test_() ->
     {?MODULE, depsolver_impossible_dependency},
     {generator, ?MODULE, depsolver_environment_respected},
     {?MODULE, depsolver_impossible_dependency_via_environment},
-    {?MODULE, depsolver_complex_dependency}
+    {?MODULE, depsolver_complex_dependency},
+    {?MODULE, depsolver_first},
+    {?MODULE, depsolver_second},
+    {?MODULE, depsolver_third},
+    {?MODULE, depsolver_fail},
+    {?MODULE, depsolver_conflicting_passing},
+    {?MODULE, depsolver_circular_dependencies},
+    {?MODULE, depsolver_conflicting_failing},
+    {?MODULE, depsolver_pessimistic_major_minor_patch},
+    {?MODULE, depsolver_pessimistic_major_minor},
+    {?MODULE, depsolver_missing},
+    {?MODULE, depsolver_missing_via_culprit_search},
+    {?MODULE, depsolver_binary}
    ]
   }.
 
@@ -299,6 +311,302 @@ depsolver_complex_dependency() ->
     %% verify that an unrelated set of constraints doesn't change anything
     Cons = [{<<"someting">>, <<"1.0.0">>, '='}],
     ?assertEqual(Ret, chef_depsolver:solve_dependencies(World, Cons, [<<"foo">>, <<"buzz">>])).
+
+depsolver_first() ->
+    World = [{<<"app1">>, [{<<"0.1">>, [{<<"app2">>, <<"0.2.33">>},
+                                        {<<"app3">>, <<"0.2">>, '>='}]},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]},
+             {<<"app2">>, [{<<"0.1">>, []},
+                           {<<"0.2.33">>,[{<<"app3">>, <<"0.3">>}]},
+                           {<<"0.3">>, []}]},
+             {<<"app3">>, [{<<"0.1">>, []},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]}],
+    RunList = [{<<"app1">>, <<"0.1">>}],
+    Expected = {ok,[{<<"app1">>,{0,1,0}},
+                    {<<"app2">>,{0,2,33}},
+                    {<<"app3">>,{0,3,0}}]},
+    Result = chef_depsolver:solve_dependencies(World, [], RunList),
+    ?assertEqual(Expected, Result).
+
+depsolver_second() ->
+    World = [{<<"app1">>, [{<<"0.1">>, [{<<"app2">>, <<"0.1">>, '>='},
+                                        {<<"app4">>, <<"0.2">>},
+                                        {<<"app3">>, <<"0.2">>, '>='}]},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]},
+             {<<"app2">>, [{<<"0.1">>, [{<<"app3">>, <<"0.2">>, gte}]},
+                           {<<"0.2">>, [{<<"app3">>, <<"0.2">>, gte}]},
+                           {<<"0.3">>, [{<<"app3">>, <<"0.2">>, '>='}]}]},
+             {<<"app3">>, [{<<"0.1">>, [{<<"app4">>, <<"0.2">>, '>='}]},
+                           {<<"0.2">>, [{<<"app4">>, <<"0.2">>}]},
+                           {<<"0.3">>, []}]},
+             {<<"app4">>, [{<<"0.1">>, []},
+                           {<<"0.2">>, [{<<"app2">>, <<"0.2">>, gte},
+                                        {<<"app3">>, <<"0.3">>}]},
+                           {<<"0.3">>, []}]}],
+    RunList = [{<<"app1">>, <<"0.1">>},
+               {<<"app2">>, <<"0.3">>}],
+    Expected = {ok, [{<<"app1">>,{0,1,0}},
+                     {<<"app2">>,{0,3,0}},
+                     {<<"app3">>,{0,3,0}},
+                     {<<"app4">>,{0,2,0}}]},
+    Result = chef_depsolver:solve_dependencies(World, [], RunList),
+    ?assertEqual(Expected, Result).
+
+depsolver_third() ->
+    Pkg1Deps = [{<<"app2">>, <<"0.1.0">>, '>='},
+                {<<"app3">>, <<"0.1.1">>, gte},
+                {<<"app3">>, <<"0.1.5">>, lte}], %% adding gte and lte to replace between
+    Pkg2Deps = [{<<"app4">>, <<"5.0.0">>, gte}],
+    Pkg3Deps = [{<<"app5">>, <<"2.0.0">>, '>='}],
+    Pkg4Deps = [<<"app5">>],
+    World = [{<<"app1">>, [{<<"0.1.0">>, Pkg1Deps},
+                           {<<"0.2">>, Pkg1Deps},
+                           {<<"3.0">>, Pkg1Deps}]},
+             {<<"app2">>, [{<<"0.0.1">>, Pkg2Deps},
+                           {<<"0.1">>, Pkg2Deps},
+                           {<<"1.0">>, Pkg2Deps},
+                           {<<"3.0">>, Pkg2Deps}]},
+             {<<"app3">>, [{<<"0.1.0">>, Pkg3Deps},
+                           {<<"0.1.3">>, Pkg3Deps},
+                           {<<"2.0.0">>, Pkg3Deps},
+                           {<<"3.0.0">>, Pkg3Deps},
+                           {<<"4.0.0">>, Pkg3Deps}]},
+             {<<"app4">>, [{<<"0.1.0">>, Pkg4Deps},
+                           {<<"0.3.0">>, Pkg4Deps},
+                           {<<"5.0.0">>, Pkg4Deps},
+                           {<<"6.0.0">>, Pkg4Deps}]},
+             {<<"app5">>, [{<<"0.1.0">>, []},
+                           {<<"0.3.0">>, []},
+                           {<<"2.0.0">>, []},
+                           {<<"6.0.0">>, []}]}],
+
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{3,0,0}},
+                       {<<"app4">>,{6,0,0}},
+                       {<<"app5">>,{6,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World, [], [{<<"app1">>, <<"3.0">>}])),
+
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{3,0,0}},
+                       {<<"app4">>,{6,0,0}},
+                       {<<"app5">>,{6,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World, [], [<<"app1">>])).
+
+depsolver_fail() ->
+    World = [{<<"app1">>, [{<<"0.1">>, [{<<"app2">>, <<"0.2">>},
+                                        {<<"app3">>, <<"0.2">>, gte}]},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]},
+             {<<"app2">>, [{<<"0.1">>, []},
+                           {<<"0.2">>,[{<<"app3">>, <<"0.1">>}]},
+                           {<<"0.3">>, []}]},
+             {<<"app3">>, [{<<"0.1">>, []},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]}],
+
+    Result = chef_depsolver:solve_dependencies(World, [], [{<<"app1">>, <<"0.1">>}]),
+    ?assertMatch({error, no_solution, _}, Result).
+
+depsolver_conflicting_passing() ->
+    Pkg1Deps = [{<<"app2">>, <<"0.1.0">>, '>='},
+                {<<"app5">>, <<"2.0.0">>},
+                {<<"app4">>, <<"0.3.0">>, gte},
+                {<<"app4">>, <<"5.0.0">>, lte},
+                {<<"app3">>, <<"0.1.1">>, gte},
+                {<<"app3">>, <<"0.1.5">>, lte}],
+    Pkg2Deps = [{<<"app4">>, <<"3.0.0">>, gte}],
+    Pkg3Deps = [{<<"app5">>, <<"2.0.0">>, '>='}],
+
+    World = [{<<"app1">>, [{<<"0.1.0">>, Pkg1Deps},
+                           {<<"0.2">>, Pkg1Deps},
+                           {<<"3.0">>, Pkg1Deps}]},
+             {<<"app2">>, [{<<"0.0.1">>, Pkg2Deps},
+                           {<<"0.1">>, Pkg2Deps},
+                           {<<"1.0">>, Pkg2Deps},
+                           {<<"3.0">>, Pkg2Deps}]},
+             {<<"app3">>, [{<<"0.1.0">>, Pkg3Deps},
+                           {<<"0.1.3">>, Pkg3Deps},
+                           {<<"2.0.0">>, Pkg3Deps},
+                           {<<"3.0.0">>, Pkg3Deps},
+                           {<<"4.0.0">>, Pkg3Deps}]},
+             {<<"app4">>, [{<<"0.1.0">>, [{<<"app5">>, <<"0.1.0">>}]},
+                           {<<"0.3.0">>, [{<<"app5">>, <<"0.3.0">>}]},
+                           {<<"5.0.0">>, [{<<"app5">>, <<"2.0.0">>}]},
+                           {<<"6.0.0">>, [{<<"app5">>, <<"6.0.0">>}]}]},
+             {<<"app5">>, [{<<"0.1.0">>, []},
+                           {<<"0.3.0">>, []},
+                           {<<"2.0.0">>, []},
+                           {<<"6.0.0">>, []}]}],
+
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{3,0,0}},
+                       {<<"app4">>,{5,0,0}},
+                       {<<"app5">>,{2,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World,
+                                                   [],
+                                                   [{<<"app1">>, <<"3.0">>}])),
+
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{3,0,0}},
+                       {<<"app4">>,{5,0,0}},
+                       {<<"app5">>,{2,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World,
+                                                   [],
+%%                                                   [<<"app5">>, <<"app2">>, <<"app1">>])).
+                                                   [<<"app1">>, <<"app2">>, <<"app5">>])).
+
+depsolver_circular_dependencies() ->
+    World = [{<<"app1">>, [{<<"0.1.0">>, [<<"app2">>]}]},
+             {<<"app2">>, [{<<"0.0.1">>, [<<"app1">>]}]}],
+
+    ?assertEqual({ok, [{<<"app1">>,{0,1,0}},
+                       {<<"app2">>,{0,0,1}}]},
+                 chef_depsolver:solve_dependencies(World,
+                                                   [],
+                                                   [{<<"app1">>, <<"0.1.0">>}])).
+
+depsolver_conflicting_failing() ->
+    Pkg1Deps = [<<"app2">>,
+                {<<"app5">>, <<"2.0.0">>, '='},
+                {<<"app4">>, <<"0.3.0">>, gte},
+                {<<"app4">>, <<"5.0.0">>, lte}],
+    Pkg2Deps = [{<<"app4">>, <<"5.0.0">>, gte}],
+    Pkg3Deps = [{<<"app5">>, <<"6.0.0">>}],
+
+
+    World = [{<<"app1">>, [{<<"3.0">>, Pkg1Deps}]},
+             {<<"app2">>, [{<<"0.0.1">>, Pkg2Deps}]},
+             {<<"app3">>, [{<<"0.1.0">>, Pkg3Deps}]},
+             {<<"app4">>, [{<<"5.0.0">>, [{<<"app5">>, <<"2.0.0">>}]}]},
+             {<<"app5">>, [{<<"2.0.0">>, []},
+                           {<<"6.0.0">>, []}]}],
+    Result = chef_depsolver:solve_dependencies(World, [], [<<"app1">>, <<"app3">>]),
+    ?assertMatch({error, no_solution, _}, Result).
+
+depsolver_pessimistic_major_minor_patch() ->
+
+    Pkg1Deps = [{<<"app2">>, <<"2.1.1">>, '~>'},
+                {<<"app3">>, <<"0.1.1">>, gte},
+                {<<"app3">>, <<"0.1.5">>, lte}],
+
+    Pkg2Deps = [{<<"app4">>, <<"5.0.0">>, gte}],
+    Pkg3Deps = [{<<"app5">>, <<"2.0.0">>, '>='}],
+    Pkg4Deps = [<<"app5">>],
+
+    World = [{<<"app1">>, [{<<"0.1.0">>, Pkg1Deps},
+                           {<<"0.2">>, Pkg1Deps},
+                           {<<"3.0">>, Pkg1Deps}]},
+             {<<"app2">>, [{<<"0.0.1">>, Pkg2Deps},
+                           {<<"0.1">>, Pkg2Deps},
+                           {<<"1.0">>, Pkg2Deps},
+                           {<<"2.1.5">>, Pkg2Deps},
+                           {<<"2.2">>, Pkg2Deps},
+                           {<<"3.0">>, Pkg2Deps}]},
+             {<<"app3">>, [{<<"0.1.0">>, Pkg3Deps},
+                           {<<"0.1.3">>, Pkg3Deps},
+                           {<<"2.0.0">>, Pkg3Deps},
+                           {<<"3.0.0">>, Pkg3Deps},
+                           {<<"4.0.0">>, Pkg3Deps}]},
+             {<<"app4">>, [{<<"0.1.0">>, Pkg4Deps},
+                           {<<"0.3.0">>, Pkg4Deps},
+                           {<<"5.0.0">>, Pkg4Deps},
+                           {<<"6.0.0">>, Pkg4Deps}]},
+             {<<"app5">>, [{<<"0.1.0">>, []},
+                           {<<"0.3.0">>, []},
+                           {<<"2.0.0">>, []},
+                           {<<"6.0.0">>, []}]}],
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{2,1,5}},
+                       {<<"app4">>,{6,0,0}},
+                       {<<"app5">>,{6,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World, [], [{<<"app1">>, <<"3.0">>}])).
+
+depsolver_pessimistic_major_minor() ->
+
+    Pkg1Deps = [{<<"app2">>, <<"2.1">>, '~>'},
+                {<<"app3">>, <<"0.1.1">>, gte},
+                {<<"app3">>, <<"0.1.5">>, lte}],
+    Pkg2Deps = [{<<"app4">>, <<"5.0.0">>, gte}],
+    Pkg3Deps = [{<<"app5">>, <<"2.0.0">>, '>='}],
+    Pkg4Deps = [<<"app5">>],
+
+    World = [{<<"app1">>, [{<<"0.1.0">>, Pkg1Deps},
+                           {<<"0.2">>, Pkg1Deps},
+                           {<<"3.0">>, Pkg1Deps}]},
+             {<<"app2">>, [{<<"0.0.1">>, Pkg2Deps},
+                           {<<"0.1">>, Pkg2Deps},
+                           {<<"1.0">>, Pkg2Deps},
+                           {<<"2.1.5">>, Pkg2Deps},
+                           {<<"2.2">>, Pkg2Deps},
+                           {<<"3.0">>, Pkg2Deps}]},
+             {<<"app3">>, [{<<"0.1.0">>, Pkg3Deps},
+                           {<<"0.1.3">>, Pkg3Deps},
+                           {<<"2.0.0">>, Pkg3Deps},
+                           {<<"3.0.0">>, Pkg3Deps},
+                           {<<"4.0.0">>, Pkg3Deps}]},
+             {<<"app4">>, [{<<"0.1.0">>, Pkg4Deps},
+                           {<<"0.3.0">>, Pkg4Deps},
+                           {<<"5.0.0">>, Pkg4Deps},
+                           {<<"6.0.0">>, Pkg4Deps}]},
+             {<<"app5">>, [{<<"0.1.0">>, []},
+                           {<<"0.3.0">>, []},
+                           {<<"2.0.0">>, []},
+                           {<<"6.0.0">>, []}]}],
+    ?assertEqual({ok, [{<<"app1">>,{3,0,0}},
+                       {<<"app2">>,{2,2,0}},
+                       {<<"app4">>,{6,0,0}},
+                       {<<"app5">>,{6,0,0}},
+                       {<<"app3">>,{0,1,3}}]},
+                 chef_depsolver:solve_dependencies(World, [], [{<<"app1">>, <<"3.0">>}])).
+
+depsolver_missing() ->
+    World = [{<<"app1">>, [{<<"0.1">>, [{<<"app2">>, <<"0.2">>},
+                                    {<<"app3">>, <<"0.2">>, '>='},
+                                    {<<"app4">>, <<"0.2">>, '='}]},
+                           {<<"0.2">>, [{<<"app4">>, <<"0.2">>}]},
+                           {<<"0.3">>, [{<<"app4">>, <<"0.2">>, '='}]}]},
+             {<<"app2">>, [{<<"0.1">>, []},
+                           {<<"0.2">>,[{<<"app3">>, <<"0.3">>}]},
+                           {<<"0.3">>, []}]},
+             {<<"app3">>, [{<<"0.1">>, []},
+                           {<<"0.2">>, []},
+                           {<<"0.3">>, []}]}],
+
+    Ret1 = chef_depsolver:solve_dependencies(World,
+                                             [],
+                                             [{<<"app4">>, <<"0.1">>}, {<<"app3">>, <<"0.1">>}]),
+    ?assertMatch({error,invalid_constraints,
+                  [{non_existent_cookbooks,[<<"app4">>]},
+                   {constraints_not_met,[]}]}, Ret1),
+
+    Ret2 = chef_depsolver:solve_dependencies(World, [], [{<<"app1">>, <<"0.1">>}]),
+    ?assertMatch({error,no_solution,_},Ret2).
+
+
+depsolver_missing_via_culprit_search() ->
+    World = [{<<"app1">>,[{<<"1.1.0">>,[]}]},
+             {<<"app2">>,[{<<"0.0.1">>,[{<<"app1::oops">>,<<"0.0.0">>,'>='}]} ]} ],
+    Result = chef_depsolver:solve_dependencies(World, [], [<<"app1">>,<<"app2">>]),
+    ?assertMatch({error,no_solution,_}, Result).
+
+%% This test from the depsolver library may no longer be necessary. It seems to be
+%% testing that you can pass binary data to depsolver and it performs the same.
+%% I've modified all of the other test to pass data as binary so that they work
+%% when converted to Ruby.
+depsolver_binary() ->
+    World = [{<<"foo">>, [{<<"1.2.3">>, [{<<"bar">>, <<"2.0.0">>, gt}]}]},
+             {<<"bar">>, [{<<"2.0.0">>, [{<<"foo">>, <<"3.0.0">>, gt}]}]}],
+
+    Result = chef_depsolver:solve_dependencies(World, [], [<<"foo">>]),
+    ?assertMatch({error, no_solution, _}, Result).
 
 make_env(Name, Deps) ->
     Ejson0 = {[
