@@ -74,7 +74,8 @@ receive do |m|
       DepSelector::SolutionConstraint.new(graph.package(item_name), version_constraint)
     end
 
-    selector = DepSelector::Selector.new(graph, 10)
+    timeout_ms = data[:timeout_ms]
+    selector = DepSelector::Selector.new(graph, (timeout_ms / 1000.0))
 
     answer = begin
                solution = selector.find_solution(run_list, all_versions)
@@ -112,7 +113,8 @@ receive do |m|
                                              [:most_constrained_cookbooks, most_constrained_cookbooks]])
 
                [:error, :no_solution, error_detail]
-             rescue DepSelector::Exceptions::TimeBoundExceededNoSolution => e
+             rescue DepSelector::Exceptions::TimeBoundExceeded,
+                    DepSelector::Exceptions::TimeBoundExceededNoSolution => e
                [:error, :timeout]
              end
 

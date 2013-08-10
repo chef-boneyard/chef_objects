@@ -74,16 +74,17 @@ init([]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({solve, AllVersions, EnvConstraints, Cookbooks}, _From, #state{port=Port} = State) ->
+handle_call({solve, AllVersions, EnvConstraints, Cookbooks, Timeout}, _From, #state{port=Port} = State) ->
     Payload = term_to_binary({solve, [{environment_constraints, EnvConstraints},
                                       {all_versions, AllVersions},
-                                      {run_list, Cookbooks}]}),
+                                      {run_list, Cookbooks},
+                                      {timeout_ms, Timeout}]}),
     port_command(Port, Payload),
     Reply = receive
                 {Port, {data, Data}} ->
                     binary_to_term(Data)
             after
-                5000 ->
+                Timeout ->
                     {error, resolution_timeout}
             end,
     {reply, Reply, State}.

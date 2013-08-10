@@ -122,9 +122,14 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
         error_no_members ->
             ok; %TODO - handle
         Pid ->
-            Result = gen_server:call(Pid, {solve, AllVersions, EnvConstraints, Cookbooks}),
-            pooler:return_member(chef_depsolver, Pid, ok),
-            Result
+            case gen_server:call(Pid, {solve, AllVersions, EnvConstraints, Cookbooks, depsolver_timeout()}) of
+                {error, resolution_timeout} ->
+                    pooler:return_member(chef_depsolver, Pid, fail),
+                    {error, resolution_timeout};
+                Result ->
+                    pooler:return_member(chef_depsolver, Pid, ok),
+                    Result
+            end
     end.
 
 depsolver_timeout() ->
