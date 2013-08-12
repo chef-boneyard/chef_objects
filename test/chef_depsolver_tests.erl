@@ -63,7 +63,8 @@ all_test_() ->
     {?MODULE, depsolver_pessimistic_major_minor},
     {?MODULE, depsolver_missing},
     {?MODULE, depsolver_missing_via_culprit_search},
-    {?MODULE, depsolver_binary}
+    {?MODULE, depsolver_binary},
+    {?MODULE, depsolver_no_workers}
    ]
   }.
 
@@ -607,6 +608,13 @@ depsolver_binary() ->
 
     Result = chef_depsolver:solve_dependencies(World, [], [<<"foo">>]),
     ?assertMatch({error, no_solution, _}, Result).
+
+depsolver_no_workers() ->
+    World = [{<<"app1">>, [{<<"1.1.0">>}], []}],
+    RunList = [<<"app1">>],
+    _Steal = pooler:take_member(chef_depsolver),
+    ?assertEqual({error, no_depsolver_workers},
+                 chef_depsolver:solve_dependencies(World, [], RunList)).
 
 make_env(Name, Deps) ->
     Ejson0 = {[

@@ -120,7 +120,7 @@ solve_dependencies(_AllVersions, _EnvConstraints, []) ->
 solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
     case pooler:take_member(chef_depsolver) of
         error_no_members ->
-            ok; %TODO - handle
+            {error, no_depsolver_workers};
         Pid ->
             case gen_server:call(Pid, {solve, AllVersions, EnvConstraints, Cookbooks, depsolver_timeout()}) of
                 {error, resolution_timeout} ->
