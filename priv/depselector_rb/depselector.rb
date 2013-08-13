@@ -115,7 +115,10 @@ receive do |m|
                [:error, :no_solution, error_detail]
              rescue DepSelector::Exceptions::TimeBoundExceeded,
                     DepSelector::Exceptions::TimeBoundExceededNoSolution => e
-               [:error, :timeout]
+               # While dep_selector differentiates between the two solutions, the opscode-chef
+               # API returns the same error regardless of the timeout type. We'll swallow the
+               # difference here and return a unified timeout to erchef
+               [:error, :resolution_timeout]
              end
 
     m.send!(answer)
