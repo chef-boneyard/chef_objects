@@ -115,11 +115,21 @@ handle_call({solve, AllVersions, EnvConstraints, Cookbooks, Timeout}, _From, #st
                                       {run_list, Cookbooks},
                                       {timeout_ms, Timeout}]}),
     port_command(Port, Payload),
+
+    %% The underlying ruby code has the potential to reach nearly 2x the
+    %% timeout value passed in. The timeout value is applied first on the
+    %% initial solve. If a solution fails within the timeout, the timeout
+    %% is then applied again to the culprit search. To account for this
+    %% worst case scenario, we will double the receive timeout and add a
+    %% small buffer of 50ms to account for inter-process communication
+    %% time.
+    ReceiveTimeout = (Timeout * 2) + 50,
+
     Reply = receive
                 {Port, {data, Data}} ->
                     binary_to_term(Data)
             after
-                Timeout ->
+                ReceiveTimeout ->
                     {error, resolution_timeout}
             end,
     {reply, Reply, State}.
