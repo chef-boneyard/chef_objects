@@ -13,11 +13,17 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([solve_dependencies/4,
+         start_link/0]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([code_change/3,
+         handle_call/3,
+         handle_cast/2,
+         handle_info/2,
+         init/1,
+         terminate/2]).
+
 
 -define(SERVER, chef_depsolver).
 
@@ -38,6 +44,35 @@
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
+
+%%--------------------------------------------------------------------
+%% @doc
+%% Solve dependencies with the given state and constraints
+%% @end
+%%--------------------------------------------------------------------
+-spec solve_dependencies(AllVersions :: [chef_depsolver:dependency_set()],
+                         EnvConstraints :: [chef_depsolver:constraint()],
+                         Cookbooks :: [Name::binary() |
+                                             {Name::binary(), Version::binary()}],
+                         Timeout :: integer()) ->
+                                {ok, [ chef_depsolver:versioned_cookbook()]} | {error, term()}.
+solve_dependencies(AllVersions, EnvConstraints, Cookbooks, Timeout) ->
+    case pooler:take_member(chef_depsolver) of
+        error_no_members ->
+            {error, no_depsolver_workers};
+        Pid ->
+            case gen_server:call(Pid, {solve, AllVersions, EnvConstraints, Cookbooks, Timeout}, infinity) of
+                {error, resolution_timeout} ->
+                    %% testing has shown that returning the worker to the pool
+                    %% with 'fail' will reliably stop the ruby sub-process
+                    %% and not leave zombie processes consuming system resources.
+                    pooler:return_member(chef_depsolver, Pid, fail),
+                    {error, resolution_timeout};
+                Result ->
+                    pooler:return_member(chef_depsolver, Pid, ok),
+                    Result
+            end
+    end.
 
 %%%===================================================================
 %%% gen_server callbacks

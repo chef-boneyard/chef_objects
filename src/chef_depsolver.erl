@@ -118,19 +118,10 @@ validate_body(Body) ->
 solve_dependencies(_AllVersions, _EnvConstraints, []) ->
     {ok, []};
 solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
-    case pooler:take_member(chef_depsolver) of
-        error_no_members ->
-            {error, no_depsolver_workers};
-        Pid ->
-            case gen_server:call(Pid, {solve, AllVersions, EnvConstraints, Cookbooks, depsolver_timeout()}) of
-                {error, resolution_timeout} ->
-                    pooler:return_member(chef_depsolver, Pid, fail),
-                    {error, resolution_timeout};
-                Result ->
-                    pooler:return_member(chef_depsolver, Pid, ok),
-                    Result
-            end
-    end.
+    chef_depsolver_worker:solve_dependencies(AllVersions,
+                                             EnvConstraints,
+                                             Cookbooks,
+                                             depsolver_timeout()).
 
 depsolver_timeout() ->
     case application:get_env(chef_objects, depsolver_timeout) of
