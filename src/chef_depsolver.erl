@@ -102,12 +102,12 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
                     end),
     Graph = folsom_time(depsolver, add_packages,
                         fun() ->
-                                depsolver:add_packages(depsolver:new_graph(),
-                                                       FilteredVersions)
+                                depsolver_gecode:add_packages(depsolver_gecode:new_graph(),
+                                                              FilteredVersions)
                         end),
     Result = folsom_time(depsolver, solve,
                          fun() ->
-                                 depsolver:solve(Graph, Cookbooks, depsolver_timeout())
+                                 depsolver_gecode:solve(Graph, Cookbooks, depsolver_timeout())
                          end),
     sanitize_semver(Result).
 
