@@ -102,12 +102,12 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
                     end),
     Graph = folsom_time(depsolver, add_packages,
                         fun() ->
-                                depsolver:add_packages(depsolver:new_graph(),
-                                                       FilteredVersions)
+                                depsolver_gecode:add_packages(depsolver_gecode:new_graph(),
+                                                              FilteredVersions)
                         end),
     Result = folsom_time(depsolver, solve,
                          fun() ->
-                                 depsolver:solve(Graph, Cookbooks, depsolver_timeout())
+                                 depsolver_gecode:solve(Graph, Cookbooks, depsolver_timeout())
                          end),
     sanitize_semver(Result).
 
@@ -119,10 +119,15 @@ solve_dependencies(AllVersions, EnvConstraints, Cookbooks) ->
 %% depsolver_culprits module is used to format the error returns and it is expecting data in
 %% this format.
 sanitize_semver({ok, WithSemver}) ->
-    XYZOnly = [ {Name, XYZVersion} || {Name, {XYZVersion, _SemVer}} <- WithSemver ],
+    XYZOnly = [ {Name, strip_semver_extras(Version)} || {Name, Version} <- WithSemver ],
     {ok, XYZOnly};
 sanitize_semver(Error) ->
     Error.
+
+strip_semver_extras({V, {_,_}}) ->
+    V;
+strip_semver_extras(X) ->
+    X.
 
 depsolver_timeout() ->
     case application:get_env(chef_objects, depsolver_timeout) of
