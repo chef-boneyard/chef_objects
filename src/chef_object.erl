@@ -79,6 +79,9 @@
 -callback type_name(object_rec()) ->
     atom().
 
+-callback conflict_message(binary() | {binary(), binary()}) ->
+    ejson_term().
+
 -export([
          authz_id/1,
          set_created/2,
@@ -106,7 +109,9 @@
          fetch/2,
          update/3,
          default_fetch/2,
-         default_update/2
+         default_update/2,
+
+         conflict_message/2
         ]).
 
 -export_type([
@@ -234,3 +239,8 @@ default_update(ObjectRec, CallbackFun) ->
     QueryName = chef_object:update_query(ObjectRec),
     UpdatedFields = chef_object:fields_for_update(ObjectRec),
     CallbackFun({QueryName, UpdatedFields}).
+
+-spec conflict_message(object_rec(), binary() | {binary(), binary()}) -> ejson_term().
+conflict_message(Rec, Name) ->
+    Mod = callback_mod(Rec),
+    Mod:conflict_message(Name).

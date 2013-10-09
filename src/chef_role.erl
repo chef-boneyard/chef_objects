@@ -24,6 +24,7 @@
 
 -export([
          authz_id/1,
+         conflict_message/1,
          ejson_for_indexing/2,
          fields_for_fetch/1,
          fields_for_update/1,
@@ -281,3 +282,6 @@ record_fields() ->
 list(#chef_role{org_id = OrgId}, CallbackFun) ->
     CallbackFun({list_query(), [OrgId], [name]}).
 
+-spec conflict_message(binary()) -> ejson_term().
+conflict_message(_Name) ->
+    {[{<<"error">>, [<<"Role already exists">>]}]}.
