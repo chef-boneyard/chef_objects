@@ -23,6 +23,7 @@
 
 -export([
          authz_id/1,
+         conflict_message/1,
          ejson_for_indexing/2,
          extract_recipes/1,
          extract_roles/1,
@@ -215,6 +216,11 @@ fields_for_fetch(#chef_node{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_node).
+
+-spec conflict_message(binary()) -> ejson_term().
+conflict_message(_Name) ->
+    Msg = <<"Node already exists">>,
+    {[{<<"error">>, [Msg]}]}.
 
 extract_recipes(RunList) ->
     [ binary:part(Item, {0, byte_size(Item) - 1})

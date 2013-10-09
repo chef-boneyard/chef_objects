@@ -25,6 +25,7 @@
 -export([
          add_type_and_bag/2,
          authz_id/1,
+         conflict_message/1,
          ejson_for_indexing/2,
          is_indexed/0,
          fields_for_fetch/1,
@@ -165,6 +166,12 @@ fields_for_fetch(#chef_data_bag_item{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_data_bag_item).
+
+-spec conflict_message({binary(), binary()}) -> ejson_term().
+conflict_message({BagName, ItemName}) ->
+    Msg = <<"Data Bag Item '", ItemName/binary, "' already exists in Data Bag '",
+            BagName/binary, "'.">>,
+    {[{<<"error">>, [Msg]}]}.
 
 -spec add_type_and_bag(BagName :: binary(), Item :: ejson_term()) -> ejson_term().
 %% @doc Returns data bag item EJSON `Item' with keys `chef_type' and `data_bag' added.

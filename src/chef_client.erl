@@ -24,6 +24,7 @@
          authz_id/1,
          add_authn_fields/2,
          assemble_client_ejson/2,
+         conflict_message/1,
          ejson_for_indexing/2,
          fields_for_fetch/1,
          fields_for_update/1,
@@ -205,6 +206,10 @@ fields_for_fetch(#chef_client{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_client).
+
+-spec conflict_message(binary()) -> ejson_term().
+conflict_message(_Name) ->
+    {[{<<"error">>, [<<"Client already exists">>]}]}.
 
 -spec add_authn_fields(ejson_term(), binary()) -> ejson_term().
 %% @doc Add in the generated public key along with other authn related

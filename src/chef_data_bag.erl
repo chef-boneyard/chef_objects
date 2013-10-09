@@ -23,6 +23,7 @@
 
 -export([
          authz_id/1,
+         conflict_message/1,
          ejson_for_indexing/2,
          fields_for_fetch/1,
          fields_for_update/1,
@@ -155,6 +156,11 @@ fields_for_fetch(#chef_data_bag{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_data_bag).
+
+-spec conflict_message(binary()) -> ejson_term().
+conflict_message(_Name) ->
+    %% {[{<<"error">>, [<<"Data Bag '", Name/binary, "' already exists">>]}]}.
+    {[{<<"error">>, [<<"Data bag already exists">>]}]}.
 
 %% @doc Convert a binary JSON string representing a Chef data_bag into an EJson-encoded
 %% Erlang data structure.

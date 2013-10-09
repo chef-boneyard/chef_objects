@@ -26,6 +26,7 @@
          assemble_cookbook_ejson/2,
          authz_id/1,
          base_cookbook_name/1,
+         conflict_message/1,
          constraint_map_spec/1,
          ejson_for_indexing/2,
          extract_checksums/1,
@@ -176,6 +177,10 @@ new_record(OrgId, AuthzId, CBVData) ->
                            metadata = Metadata,
                            checksums = extract_checksums(CBVData),
                            serialized_object = Data}.
+
+-spec conflict_message(binary()) -> ejson_term().
+conflict_message(_Name) ->
+    {[{<<"error">>, [<<"Cookbook already exists">>]}]}.
 
 compress_maybe(Data, cookbook_long_desc) ->
     chef_db_compression:compress(cookbook_long_desc, Data);
