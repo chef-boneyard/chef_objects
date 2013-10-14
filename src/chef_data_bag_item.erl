@@ -35,6 +35,7 @@
          new_record/3,
          parse_binary_json/2,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_updated/2,
          type_name/1,
@@ -165,6 +166,9 @@ fields_for_fetch(#chef_data_bag_item{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_data_bag_item).
+
+rename_supported() ->
+    false.
 
 -spec add_type_and_bag(BagName :: binary(), Item :: ejson_term()) -> ejson_term().
 %% @doc Returns data bag item EJSON `Item' with keys `chef_type' and `data_bag' added.
