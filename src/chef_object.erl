@@ -79,6 +79,8 @@
 -callback type_name(object_rec()) ->
     atom().
 
+-callback rename_supported() -> true | false.
+
 -export([
          authz_id/1,
          set_created/2,
@@ -106,7 +108,9 @@
          fetch/2,
          update/3,
          default_fetch/2,
-         default_update/2
+         default_update/2,
+
+         rename_supported/1
         ]).
 
 -export_type([
@@ -234,3 +238,7 @@ default_update(ObjectRec, CallbackFun) ->
     QueryName = chef_object:update_query(ObjectRec),
     UpdatedFields = chef_object:fields_for_update(ObjectRec),
     CallbackFun({QueryName, UpdatedFields}).
+
+-spec rename_supported(object_rec()) -> true | false.
+rename_supported(Rec) ->
+    call0(Rec, rename_supported).

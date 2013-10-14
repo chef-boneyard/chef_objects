@@ -41,6 +41,7 @@
          parse_version/1,
          qualified_recipe_names/2,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_updated/2,
 
@@ -176,6 +177,9 @@ new_record(OrgId, AuthzId, CBVData) ->
                            metadata = Metadata,
                            checksums = extract_checksums(CBVData),
                            serialized_object = Data}.
+
+rename_supported() ->
+    false.
 
 compress_maybe(Data, cookbook_long_desc) ->
     chef_db_compression:compress(cookbook_long_desc, Data);

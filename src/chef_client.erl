@@ -41,6 +41,7 @@
          parse_binary_json/2,
          parse_binary_json/3,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_updated/2,
          type_name/1,
@@ -205,6 +206,9 @@ fields_for_fetch(#chef_client{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_client).
+
+rename_supported() ->
+    true.
 
 -spec add_authn_fields(ejson_term(), binary()) -> ejson_term().
 %% @doc Add in the generated public key along with other authn related

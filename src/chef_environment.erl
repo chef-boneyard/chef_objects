@@ -34,6 +34,7 @@
          new_record/3,
          parse_binary_json/1,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_default_values/1,
          set_updated/2,
@@ -217,3 +218,6 @@ record_fields() ->
 
 list(#chef_environment{org_id = OrgId}, CallbackFun) ->
     CallbackFun({list_query(), [OrgId], [name]}).
+
+rename_supported() ->
+    false.

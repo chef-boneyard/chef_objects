@@ -36,6 +36,7 @@
          new_record/3,
          parse_check_binary_as_json_node/2,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_updated/2,
          type_name/1,
@@ -215,6 +216,9 @@ fields_for_fetch(#chef_node{org_id = OrgId,
 
 record_fields() ->
     record_info(fields, chef_node).
+
+rename_supported() ->
+    false.
 
 extract_recipes(RunList) ->
     [ binary:part(Item, {0, byte_size(Item) - 1})

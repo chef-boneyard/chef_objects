@@ -35,6 +35,7 @@
          org_id/1,
          parse_binary_json/2,
          record_fields/0,
+         rename_supported/0,
          set_created/2,
          set_updated/2,
          type_name/1,
@@ -281,3 +282,5 @@ record_fields() ->
 list(#chef_role{org_id = OrgId}, CallbackFun) ->
     CallbackFun({list_query(), [OrgId], [name]}).
 
+rename_supported() ->
+    false.
