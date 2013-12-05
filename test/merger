@@ -3,19 +3,23 @@
 %%! -pa ebin deps/jiffy/ebin deps/ej/ebin
 -include("../include/chef_types.hrl").
 
-main(NodeFiles) ->
+main([Type | NodeFiles]) ->
     application:start(jiffy),
-    [ do_deep_merge(File) || File <- NodeFiles ],
+    [ do_deep_merge(Type, File) || File <- NodeFiles ],
     ok.
 
-do_deep_merge(File) ->
+do_deep_merge(Type, File) ->
     {ok, Bin} = file:read_file(File),
-    RawNode = jiffy:decode(Bin),
-    Name = ej:get({"name"}, RawNode),
-    Env = ej:get({"chef_environment"}, RawNode),
-    MergedNode = chef_node:ejson_for_indexing(#chef_node{name = Name,
-                                                         environment = Env},
-                                              RawNode),
+    RawObject = jiffy:decode(Bin),
+    Merged = ejson_for_type(Type, RawObject),
     OutFile = File ++ ".merged",
-    file:write_file(OutFile, jiffy:encode(MergedNode)),
+    file:write_file(OutFile, jiffy:encode(Merged)),
     ok.
+
+ejson_for_type("nodes", RawObject) ->
+    Name = ej:get({"name"}, RawObject),
+    Env = ej:get({"chef_environment"}, RawObject),
+
+    chef_node:ejson_for_indexing(#chef_node{name = Name,
+                                                         environment = Env},
+                                              RawObject).
