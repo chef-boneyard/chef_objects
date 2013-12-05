@@ -16,6 +16,15 @@ do_deep_merge(Type, File) ->
     file:write_file(OutFile, jiffy:encode(Merged)),
     ok.
 
+ejson_for_type("roles", RawObject) ->
+    chef_role:ejson_for_indexing(#chef_role{}, RawObject);
+
+ejson_for_type("environments", RawObject) ->
+    chef_environment:ejson_for_indexing(#chef_environment{}, RawObject);
+
+ejson_for_type("clients", RawObject) ->
+    chef_client:ejson_for_indexing(#chef_client{}, RawObject);
+
 ejson_for_type("nodes", RawObject) ->
     Name = ej:get({"name"}, RawObject),
     Env = ej:get({"chef_environment"}, RawObject),
