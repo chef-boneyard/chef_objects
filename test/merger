@@ -3,29 +3,39 @@
 %%! -pa ebin deps/jiffy/ebin deps/ej/ebin
 -include("../include/chef_types.hrl").
 
-main([Type | NodeFiles]) ->
+main([Type | Dir]) ->
+    Files = filelib:wildcard(Dir ++ "/**.json") ++ filelib:wildcard(Dir ++ "/**/**.json"),
+    io:format("Dir ~p, Files ~p~n", [Dir, Files]),
     application:start(jiffy),
-    [ do_deep_merge(Type, File) || File <- NodeFiles ],
+    [ do_deep_merge(Type, File) || File <- Files ],
     ok.
 
 do_deep_merge(Type, File) ->
+    Basename = filename:basename(filename:rootname(File)),
     {ok, Bin} = file:read_file(File),
     RawObject = jiffy:decode(Bin),
-    Merged = ejson_for_type(Type, RawObject),
+    Merged = ejson_for_type(Type, RawObject, list_to_binary(Basename)),
     OutFile = File ++ ".merged",
     file:write_file(OutFile, jiffy:encode(Merged)),
     ok.
 
-ejson_for_type("roles", RawObject) ->
+ejson_for_type("data_bags", RawObject, Basename) ->
+    ItemName = ej:get({"id"}, RawObject),
+    chef_data_bag_item:ejson_for_indexing(#chef_data_bag_item{
+                                            data_bag_name = Basename,
+                                            item_name = ItemName
+                                            }, RawObject);
+
+ejson_for_type("roles", RawObject, _) ->
     chef_role:ejson_for_indexing(#chef_role{}, RawObject);
 
-ejson_for_type("environments", RawObject) ->
+ejson_for_type("environments", RawObject, _) ->
     chef_environment:ejson_for_indexing(#chef_environment{}, RawObject);
 
-ejson_for_type("clients", RawObject) ->
+ejson_for_type("clients", RawObject, _) ->
     chef_client:ejson_for_indexing(#chef_client{}, RawObject);
 
-ejson_for_type("nodes", RawObject) ->
+ejson_for_type("nodes", RawObject, _) ->
     Name = ej:get({"name"}, RawObject),
     Env = ej:get({"chef_environment"}, RawObject),
 
