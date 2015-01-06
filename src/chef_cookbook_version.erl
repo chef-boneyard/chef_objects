@@ -19,7 +19,6 @@
 %% under the License.
 %%
 
-
 -module(chef_cookbook_version).
 
 -export([
@@ -91,7 +90,7 @@
         [<<"attributes">>, <<"chef_type">>, <<"cookbook_name">>,
          <<"definitions">>, <<"files">>, <<"frozen?">>, <<"json_class">>, <<"libraries">>,
          <<"metadata">>, <<"name">>, <<"providers">>, <<"recipes">>, <<"resources">>,
-         <<"root_files">>, <<"templates">>, <<"version">>]).
+         <<"root_files">>, <<"spec">>, <<"templates">>, <<"test">>, <<"version">>]).
 
 -define(VALIDATION_CONSTRAINTS,
         [
@@ -193,7 +192,6 @@ parse_binary_json(Bin, {UrlName, UrlVersion}) ->
     Cookbook0 = chef_json:decode(Bin),
     Cookbook = set_default_values(Cookbook0),
     validate_cookbook(Cookbook, {UrlName, UrlVersion}).
-
 
 %% TODO: merge set_default_values and validate_role?
 
@@ -333,7 +331,7 @@ is_valid_version(Version) ->
 %% @doc Given a binary parse it to a valid cookbook version tuple {Major, Minor, Patch} or
 %% raise a `badarg' error. Each of `Major', `Minor', and `Patch' must be non-negative
 %% integer values less than 2147483647 (max size of value in pg int column). It is
-%% acceptable to provide a value with one or two dots (1.0 is the same as 1.0.0). Less 
+%% acceptable to provide a value with one or two dots (1.0 is the same as 1.0.0). Less
 %% than one dot or more than two dots is an error.
 %%
 %% @end
@@ -353,7 +351,6 @@ parse_version(Version) when is_binary(Version) ->
         _ ->
             error(badarg)
     end.
-
 
 normalize_version([X, Y]) ->
     [X, Y, 0];
@@ -474,7 +471,6 @@ qualified_recipe_names(CookbookName, SerializedObject) ->
     Recipes = extract_recipe_names(SerializedObject),
     [ maybe_qualify_name(CookbookName, RecipeName)
       || RecipeName <- Recipes ].
-
 
 %% @doc for a given qualified recipe name, extract the base cookbook
 %% name. If the input is not a qualified recipe name, return it
